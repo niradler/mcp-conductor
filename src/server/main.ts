@@ -149,6 +149,7 @@ The last expression in your code will be returned as the result.
       const logPromises: Promise<void>[] = []
 
       // Validate dependencies against allowlist
+      let enrichedDependencies = dependencies
       if (dependencies && dependencies.length > 0) {
         const validation = validateDependencies(dependencies, allowedDependencies)
         if (!validation.valid) {
@@ -156,12 +157,15 @@ The last expression in your code will be returned as the result.
             content: [{
               type: 'text',
               text:
-                `<status>error</status>\n<error>\n<type>dependency-not-allowed</type>\n<message>The following dependencies are not in the allowlist: ${validation.invalid.join(', ')
+                `<status>error</status>\n<error>\n<type>dependency-not-allowed</type>\n<message>The following dependencies are not allowed:\n\n${
+                  validation.errors.join('\n')
                 }\n\nAllowed dependencies: ${isRestrictive ? allowedDependencies.join(', ') : 'all'
                 }</message>\n</error>`,
             }],
           }
         }
+        // Use enriched dependencies with versions from allowlist
+        enrichedDependencies = validation.enriched
       }
 
       // Execute the code (permissions come from default run args set by env vars)
@@ -171,7 +175,7 @@ The last expression in your code will be returned as the result.
           // Don't pass permissions - they come from defaultRunArgs in constructor
           timeout: timeout ?? finalConfig.defaultTimeout,
           globals,
-          dependencies,
+          dependencies: enrichedDependencies, // Use enriched dependencies
         },
         (level, data) => {
           // Only log if level meets threshold
