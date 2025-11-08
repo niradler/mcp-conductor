@@ -4,34 +4,15 @@
  */
 
 import { join } from 'node:path'
+import { getWorkspaceDir, ensureDir } from '../common/paths.ts'
 
-/**
- * Get the default workspace base directory
- * Uses MCP_CONDUCTOR_WORKSPACE env var if set, otherwise uses ./.mcp-conductor/sessions
- */
 export function getWorkspaceBaseDir(): string {
-  const envWorkspace = Deno.env.get('MCP_CONDUCTOR_WORKSPACE')
-  if (envWorkspace) {
-    return envWorkspace
-  }
-  return join(Deno.cwd(), '.mcp-conductor', 'sessions')
+  return getWorkspaceDir()
 }
 
-/**
- * Ensure workspace directory exists
- */
 export async function ensureWorkspaceDir(workspaceDir?: string): Promise<string> {
   const baseDir = workspaceDir || getWorkspaceBaseDir()
-
-  try {
-    await Deno.mkdir(baseDir, { recursive: true })
-  } catch (error) {
-    // Ignore error if directory already exists
-    if (!(error instanceof Deno.errors.AlreadyExists)) {
-      throw error
-    }
-  }
-
+  await ensureDir(baseDir)
   return baseDir
 }
 

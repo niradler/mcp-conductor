@@ -19,9 +19,15 @@ export class RunCode {
   private readonly defaultTimeout: number = 30000 // 30 seconds
   private readonly maxTimeout: number = 300000 // 5 minutes
   private readonly defaultRunArgs: string[] = []
+  private mcpFactoryCode: string | null = null
 
-  constructor(defaultRunArgs?: string[]) {
+  constructor(defaultRunArgs?: string[], mcpFactoryCode?: string) {
     this.defaultRunArgs = defaultRunArgs ?? []
+    this.mcpFactoryCode = mcpFactoryCode ?? null
+  }
+
+  setMcpFactoryCode(code: string | null): void {
+    this.mcpFactoryCode = code
   }
 
   /**
@@ -179,6 +185,8 @@ export class RunCode {
     globals?: Record<string, unknown>,
     _dependencies?: string[],
   ): string {
+    const mcpFactoryInjection = this.mcpFactoryCode ? `${this.mcpFactoryCode}\n\n` : ''
+    
     const globalsCode = globals
       ? Object.entries(globals)
         .map(([key, value]) => `const ${key} = ${JSON.stringify(value)};`)
@@ -204,7 +212,7 @@ export class RunCode {
         const precedingLines = lines.slice(0, -1).join('\n')
         return `
 // MCP Run Deno - Module Execution
-${globalsCode}
+${mcpFactoryInjection}${globalsCode}
 
 ${precedingLines}
 
@@ -243,7 +251,7 @@ if (__mcpRunDenoResult !== undefined) {
         const precedingLines = lines.slice(0, -1).join('\n')
         return `
 // MCP Run Deno - Module Execution
-${globalsCode}
+${mcpFactoryInjection}${globalsCode}
 
 ${precedingLines}
 
@@ -263,7 +271,7 @@ if (__mcpRunDenoResult !== undefined) {
         // No clear return value, just run the code
         return `
 // MCP Run Deno - Module Execution
-${globalsCode}
+${mcpFactoryInjection}${globalsCode}
 
 ${trimmedCode}
 `
@@ -308,7 +316,7 @@ ${trimmedCode}
 
     return `
 // MCP Run Deno - Execution Wrapper
-${globalsCode}
+${mcpFactoryInjection}${globalsCode}
 
 // User code wrapped in async IIFE
 const __mcpRunDenoResult = await (async () => {
