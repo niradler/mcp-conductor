@@ -192,9 +192,35 @@ export class RunCode {
 
     // If code has imports, treat it as a module and don't wrap in IIFE
     if (hasImports) {
-      // For modules, we can't wrap in IIFE, so we modify the code differently
+      // For modules with imports/exports, we need to wrap in async function
+      // because top-level return is not allowed in modules
       const lines = trimmedCode.split('\n')
       const lastLine = lines[lines.length - 1].trim()
+
+      // Check if last line is a return statement
+      if (lastLine.startsWith('return ')) {
+        // Remove return and treat as expression
+        const valueExpr = lastLine.substring(7).trim() // Remove 'return '
+        const precedingLines = lines.slice(0, -1).join('\n')
+        return `
+// MCP Run Deno - Module Execution
+${globalsCode}
+
+${precedingLines}
+
+// Capture return value
+const __mcpRunDenoResult = ${valueExpr}
+
+// Serialize and output result
+if (__mcpRunDenoResult !== undefined) {
+  try {
+    console.log('__MCP_RETURN_VALUE__:' + JSON.stringify(__mcpRunDenoResult));
+  } catch (e) {
+    console.log('__MCP_RETURN_VALUE__:[Non-serializable value]');
+  }
+}
+`
+      }
 
       const isLikelyExpression = lastLine &&
         !lastLine.startsWith('const ') &&
