@@ -157,8 +157,7 @@ The last expression in your code will be returned as the result.
             content: [{
               type: 'text',
               text:
-                `<status>error</status>\n<error>\n<type>dependency-not-allowed</type>\n<message>The following dependencies are not allowed:\n\n${
-                  validation.errors.join('\n')
+                `<status>error</status>\n<error>\n<type>dependency-not-allowed</type>\n<message>The following dependencies are not allowed:\n\n${validation.errors.join('\n')
                 }\n\nAllowed dependencies: ${isRestrictive ? allowedDependencies.join(', ') : 'all'
                 }</message>\n</error>`,
             }],

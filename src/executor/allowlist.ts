@@ -67,7 +67,7 @@ function isValidPackageSpecifier(dependency: string): boolean {
 function normalizePackage(dependency: string): string {
   // Split by @ but be careful with scoped packages
   const parts = dependency.split('@')
-  
+
   if (dependency.startsWith('npm:@') || dependency.startsWith('jsr:@')) {
     // Scoped package: npm:@scope/package@version -> ["npm:", "scope/package", "version"]
     // Keep: npm:@scope/package -> rejoin first 3 parts
@@ -176,9 +176,9 @@ export function validateDependencies(
         formatErrors.push(`Invalid format: ${dep}`)
       }
     }
-    
-    return { 
-      valid: formatErrors.length === 0, 
+
+    return {
+      valid: formatErrors.length === 0,
       invalid: formatErrors.length > 0 ? dependencies : [],
       errors: formatErrors,
       enriched: dependencies, // No enrichment if all allowed
@@ -188,11 +188,11 @@ export function validateDependencies(
   const invalid: string[] = []
   const errors: string[] = []
   const enriched: string[] = []
-  
+
   for (const dep of dependencies) {
     // Enrich dependency with version from allowlist
     const enrichedDep = enrichDependencyWithVersion(dep, allowedList)
-    
+
     if (!isDependencyAllowed(enrichedDep, allowedList)) {
       invalid.push(dep)
       if (!isValidPackageSpecifier(dep)) {
