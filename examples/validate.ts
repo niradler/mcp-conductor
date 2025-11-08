@@ -5,7 +5,7 @@
  * Run: deno run --allow-all validate.ts
  */
 
-import { RunCode } from './src/executor/runCode.ts'
+import { RunCode } from '../src/executor/runCode.ts'
 
 console.log('🧪 MCP Run Deno - Validation Script\n')
 console.log('='.repeat(50))
