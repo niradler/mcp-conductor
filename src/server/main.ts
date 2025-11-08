@@ -91,6 +91,14 @@ export async function createServer(config: ServerConfig = {}): Promise<McpServer
 Permissions are configured by the server administrator via environment variables.
 You cannot specify custom permissions - this is controlled for security.
 
+**Deno-Specific Conventions** (different from Node.js):
+- Use explicit file extensions in imports: \`import { foo } from "./bar.ts"\` (not "./bar")
+- Use \`Deno.readTextFile()\` instead of \`fs.readFileSync()\`
+- Use \`fetch()\` for HTTP requests
+- NPM packages: \`import axios from "npm:axios@^1"\`
+- JSR packages: \`import { join } from "jsr:@std/path"\`
+- No node_modules - dependencies are cached globally by Deno
+
 Features:
 - Full TypeScript and modern JavaScript support
 - Async/await support (code is wrapped in an async IIFE)
