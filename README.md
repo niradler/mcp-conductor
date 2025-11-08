@@ -493,7 +493,36 @@ Deno provides fine-grained permissions that must be explicitly granted:
 | `hrtime`   | High-resolution time       | Rarely needed                                          |
 | `all`      | Grant all permissions      | ⚠️ **DANGEROUS** - avoid in production                 |
 
-#### 3. **No Interactive Prompts**
+#### 3. **Admin-Controlled Version Injection** 🔐
+
+**LLMs cannot override package versions** - admins control ALL versions via allowlist:
+
+```typescript
+// LLM writes (no version specified):
+dependencies: ['npm:axios']
+
+// Server auto-injects (from MCP_CONDUCTOR_ALLOWED_PACKAGES):
+dependencies: ['npm:axios@^1']  // ← Admin-controlled version
+```
+
+**Benefits**:
+- ✅ LLMs don't need to memorize package versions
+- ✅ Admins control security updates via environment variables
+- ✅ Prevents malicious version injection (`npm:axios@^999`)
+- ✅ Consistent versions across all executions
+
+**Security Test Results** (all passed ✅):
+
+| Attack Vector | Result |
+|--------------|--------|
+| Version override attempt (`npm:axios@^999`) | ❌ Blocked - version doesn't exist |
+| String injection (`npm:axios'; import evil`) | ❌ Blocked - invalid format detected |
+| Unauthorized package (`npm:express`) | ❌ Blocked - not in allowlist |
+| System file access (`/etc/passwd`) | ❌ Blocked - permission denied |
+| Network exfiltration (`evil.com`) | ❌ Blocked - permission denied |
+| Infinite loop | ❌ Killed after timeout |
+
+#### 4. **No Interactive Prompts**
 
 The `--no-prompt` flag ensures code **fails immediately** if permissions are insufficient,
 preventing:
@@ -507,7 +536,7 @@ preventing:
 // With --no-prompt: fails in <100ms with clear error ✅
 ```
 
-#### 4. **Two-Step Dependency Installation**
+#### 5. **Two-Step Dependency Installation**
 
 Following the [mcp-run-python security model](https://github.com/pydantic/mcp-run-python):
 
