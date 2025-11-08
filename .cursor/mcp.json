@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "mcp-conductor": {
+      "command": "deno",
+      "args": [
+        "run",
+        "--no-prompt",
+        "--allow-read",
+        "--allow-write",
+        "--allow-net",
+        "--allow-env",
+        "--allow-run=deno",
+        "src/cli/cli.ts",
+        "stdio"
+      ],
+      "env": {
+        "MCP_CONDUCTOR_WORKSPACE": "${userHome}/.mcp-conductor/workspace",
+        "MCP_CONDUCTOR_ALLOWED_PACKAGES": "npm:axios@^1,npm:zod@^3,jsr:@std/path,jsr:@std/fs",
+        "MCP_CONDUCTOR_RUN_ARGS": "allow-read=${userHome}/.mcp-conductor/workspace,allow-write=${userHome}/.mcp-conductor/workspace"
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "mcp-conductor": {
+      "command": "deno",
+      "args": [
+        "run",
+        "--no-prompt",
+        "--allow-read",
+        "--allow-write",
+        "--allow-net",
+        "--allow-env",
+        "--allow-run=deno",
+        "src/cli/cli.ts",
+        "stdio"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {},
+      "disabled": false,
+      "alwaysAllow": []
+    }
+  }
+}
