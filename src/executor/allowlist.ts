@@ -6,30 +6,28 @@
  */
 
 export const DEFAULT_ALLOWED_DEPENDENCIES = [
-  // Deno Standard Library - Core utilities
-  'jsr:@std/path@^1', // File path manipulation
-  'jsr:@std/fs@^1', // File system utilities
-  'jsr:@std/encoding@^1', // Base64, hex, etc.
-  'jsr:@std/datetime@^1', // Date/time utilities
-  'jsr:@std/collections@^1', // Array/Map utilities
-  'jsr:@std/uuid@^1', // UUID generation
-  'jsr:@std/json@^1', // JSON utilities
-  'jsr:@std/yaml@^1', // YAML parsing
-  'jsr:@std/csv@^1', // CSV parsing
+  'jsr:@std/path@^1',
+  'jsr:@std/fs@^1',
+  'jsr:@std/encoding@^1',
+  'jsr:@std/datetime@^1',
+  'jsr:@std/collections@^1',
+  'jsr:@std/uuid@^1',
+  'jsr:@std/json@^1',
+  'jsr:@std/yaml@^1',
+  'jsr:@std/csv@^1',
 
-  // HTTP & API Client
-  'npm:axios@^1', // Popular HTTP client
-  'npm:ky@^1', // Modern fetch wrapper
+  'npm:axios@^1',
 
-  // Data Processing
-  'npm:lodash@^4', // Utility functions
-  'npm:date-fns@^4', // Date manipulation
-  'npm:zod@^4', // Schema validation
+  'npm:lodash@^4',
+  'npm:date-fns@^4',
+  'npm:zod@^4',
 
-  // Additional useful packages
-  'npm:chalk@^5', // Terminal colors (for output)
-  'npm:cheerio@^1', // HTML parsing
-  'npm:marked@^17', // Markdown parsing
+  'npm:cheerio@^1',
+  'npm:marked@^17',
+
+  'npm:drizzle-kit@^0',
+  'npm:danfojs-node@^1',
+  'npm:@duckdb/node-api@^1',
 ]
 
 /**

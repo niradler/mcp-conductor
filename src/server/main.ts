@@ -133,72 +133,55 @@ export async function createServer(config: ServerConfig = {}): Promise<McpServer
   })
 
   // Define the tool schema
-  const toolDescription = `Execute TypeScript or JavaScript code in a sandboxed Deno subprocess.
+  const toolDescription = `Execute TypeScript/JavaScript in sandboxed Deno subprocess. Permissions set by admin via env vars.
 
-Permissions are configured by the server administrator via environment variables.
-You cannot specify custom permissions - this is controlled for security.
+**Deno Quick Reference**:
 
-**Deno-Specific Conventions** (different from Node.js):
-- Use explicit file extensions in imports: \`import { foo } from "./bar.ts"\` (not "./bar")
-- Use \`Deno.readTextFile()\` instead of \`fs.readFileSync()\`
-- Use \`fetch()\` for HTTP requests
-- NPM packages: \`import axios from "npm:axios@^1"\`
-- JSR packages: \`import { join } from "jsr:@std/path"\`
-- No node_modules - dependencies are cached globally by Deno
-
-Features:
-- Full TypeScript and modern JavaScript support
-- Async/await support (code is wrapped in an async IIFE)
-- Timeout protection
-- Return value capture from last expression
-- stdout/stderr capture
-- Dependency management (NPM/JSR packages)
-
-Security:
-- Runs in isolated subprocess with permissions set by administrator
-- Configurable timeouts prevent infinite loops
-- Each execution is in a fresh environment
-- Dependency allowlist enforced
-
-**MCP Factory Client** (Access Other MCP Servers):
-You can call other MCP servers from within your code using the \`mcpFactory\` global (if available):
-
+File System:
 \`\`\`typescript
-// Check if mcpFactory is available
+await Deno.writeTextFile("file.txt", "content");
+const text = await Deno.readTextFile("file.txt");
+const bytes = await Deno.readFile("file.bin");
+\`\`\`
+
+Commands:
+\`\`\`typescript
+const cmd = new Deno.Command("ls", { args: ["-la"] });
+const { stdout } = await cmd.output();
+const text = new TextDecoder().decode(stdout);
+\`\`\`
+
+Environment:
+\`\`\`typescript
+const key = Deno.env.get("API_KEY");
+\`\`\`
+
+HTTP Server:
+\`\`\`typescript
+Deno.serve({ port: 8000 }, (req) => new Response("Hello"));
+\`\`\`
+
+Imports (use .ts extension):
+\`\`\`typescript
+import { serve } from "jsr:@std/http";
+import axios from "npm:axios@^1";
+\`\`\`
+
+Globals: \`Deno.exit()\`, \`import.meta.dirname\`, no \`require()\` or \`__dirname\`
+
+**MCP Factory** (call other MCP servers):
+\`\`\`typescript
 if (typeof mcpFactory !== 'undefined') {
-  // List available servers
-  const servers = await mcpFactory.listServers() // for debugging, try to avoid this call if possible
-  
-  if (servers.length > 0) {
-    // Load a specific server
-    const github = await mcpFactory.load('github')
-    
-    // Call tools from the server
-    if (github) {
-      const repos = await github.callTool('list_repos', { username: 'octocat' })
-      console.log('GitHub repos:', repos.length) // return only the data you need, not the entire response, reduce token usage as much as possible
-    } else {
-      console.error('GitHub server not available')
-    }
-    
-    // Chain multiple servers
-    const fs = await mcpFactory.load('filesystem')
-    if (fs) {
-      await fs.callTool('write_file', { path: '/path/to/file.json', content: JSON.stringify(repos) })
-    } else {
-      console.error('Filesystem server not available')
-    }
+  const github = await mcpFactory.load('github');
+  if (github) {
+    const data = await github.callTool('tool_name', { params });
   }
-} else {
-  console.log('No MCP servers configured')
 }
 \`\`\`
 
-Note: The \`mcpFactory\` global is only available when MCP servers are configured in the server's mcp.json file.
-
 **Alternative Discovery Tools**: You can also use the \`list_mcp_servers\` and \`get_tools\` tools (outside of code execution) to discover available MCP servers and get detailed tool information before writing code.
 
-The last expression in your code will be returned as the result.
+Last expression is returned as result.
 `
 
   // Register the run_deno_code tool
