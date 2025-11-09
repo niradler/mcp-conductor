@@ -4,7 +4,7 @@
  */
 
 import { join } from 'node:path'
-import { getWorkspaceDir, ensureDir } from '../common/paths.ts'
+import { ensureDir, getWorkspaceDir } from '../common/paths.ts'
 
 export function getWorkspaceBaseDir(): string {
   return getWorkspaceDir()

@@ -37,4 +37,3 @@ export async function ensureDir(path: string): Promise<void> {
     }
   }
 }
-

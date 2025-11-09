@@ -19,16 +19,16 @@ export async function getConfigPath(): Promise<string> {
 
 export async function loadConfig(): Promise<MCPServerConfig | null> {
   const configPath = await getConfigPath()
-  
+
   try {
     const content = await Deno.readTextFile(configPath)
     const config = JSON.parse(content) as MCPServerConfig
-    
+
     if (!config.mcpServers || typeof config.mcpServers !== 'object') {
       console.error('Invalid MCP config: missing or invalid mcpServers object')
       return null
     }
-    
+
     return config
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
@@ -41,7 +41,7 @@ export async function loadConfig(): Promise<MCPServerConfig | null> {
 
 export async function calculateConfigHash(): Promise<string | null> {
   const configPath = await getConfigPath()
-  
+
   try {
     const content = await Deno.readTextFile(configPath)
     const hash = createHash('sha256')
@@ -58,30 +58,32 @@ export async function calculateConfigHash(): Promise<string | null> {
 
 export function validateConfig(config: MCPServerConfig): { valid: boolean; errors: string[] } {
   const errors: string[] = []
-  
+
   if (!config.mcpServers || typeof config.mcpServers !== 'object') {
     errors.push('Missing or invalid mcpServers object')
     return { valid: false, errors }
   }
-  
+
   for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
-    if (!serverConfig.command && !serverConfig.url) {
+    const hasCommand = 'command' in serverConfig
+    const hasUrl = 'url' in serverConfig
+
+    if (!hasCommand && !hasUrl) {
       errors.push(`Server "${name}": must have either command or url`)
     }
-    
-    if (serverConfig.command && serverConfig.url) {
+
+    if (hasCommand && hasUrl) {
       errors.push(`Server "${name}": cannot have both command and url`)
     }
-    
-    if (serverConfig.command && !serverConfig.args) {
+
+    if (hasCommand && !serverConfig.args) {
       errors.push(`Server "${name}": command requires args array`)
     }
-    
-    if (serverConfig.url && !serverConfig.transport) {
-      serverConfig.transport = 'sse'
+
+    if (hasUrl && !('transport' in serverConfig)) {
+      ;(serverConfig as any).transport = 'sse'
     }
   }
-  
+
   return { valid: errors.length === 0, errors }
 }
-

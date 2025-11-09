@@ -110,16 +110,25 @@ export type ServerMode = 'stdio' | 'streamable-http' | 'example'
 /**
  * MCP Proxy Configuration
  */
+
+export interface MCPStdioServerEntry {
+  command: string
+  args?: string[]
+  env?: Record<string, string>
+  disabled?: boolean
+}
+
+export interface MCPSSEServerEntry {
+  url: string
+  transport: 'sse'
+  disabled?: boolean
+}
+
+export type MCPServerEntry = MCPStdioServerEntry | MCPSSEServerEntry
+
 export interface MCPServerConfig {
   mcpServers: {
-    [name: string]: {
-      command?: string
-      args?: string[]
-      env?: Record<string, string>
-      url?: string
-      transport?: 'sse'
-      disabled?: boolean
-    }
+    [name: string]: MCPServerEntry
   }
 }
 

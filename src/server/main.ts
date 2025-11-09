@@ -42,19 +42,42 @@ export async function createServer(config: ServerConfig = {}): Promise<McpServer
   // Get default run args (used when no permissions specified)
   const defaultRunArgs = finalConfig.defaultRunArgs ?? []
 
-  // Initialize MCP proxy manager
-  const mcpManager = new MCPManager()
-  await mcpManager.initialize()
-
-  // Start RPC server for MCP proxy
+  // Initialize MCP proxy manager with error handling
+  let mcpManager: MCPManager | null = null
   let mcpRPCServer: MCPRPCServer | null = null
   let mcpFactoryCode: string | null = null
 
-  if (mcpManager) {
-    mcpRPCServer = new MCPRPCServer(mcpManager)
-    const rpcPort = await mcpRPCServer.start()
-    const authToken = mcpRPCServer.getAuthToken()
-    mcpFactoryCode = generateMcpFactoryCode(rpcPort, authToken)
+  try {
+    mcpManager = new MCPManager()
+    await mcpManager.initialize()
+
+    const serverList = mcpManager.listServers()
+    if (serverList.length > 0) {
+      mcpRPCServer = new MCPRPCServer(mcpManager)
+      const rpcPort = await mcpRPCServer.start()
+      const authToken = mcpRPCServer.getAuthToken()
+      mcpFactoryCode = generateMcpFactoryCode(rpcPort, authToken)
+    }
+  } catch (err) {
+    console.error('Failed to initialize MCP proxy:', err)
+    // Cleanup any resources that were created
+    if (mcpRPCServer) {
+      try {
+        await mcpRPCServer.stop()
+      } catch (stopErr) {
+        console.error('Error stopping RPC server during cleanup:', stopErr)
+      }
+    }
+    if (mcpManager) {
+      try {
+        await mcpManager.shutdown()
+      } catch (shutdownErr) {
+        console.error('Error shutting down manager during cleanup:', shutdownErr)
+      }
+    }
+    mcpManager = null
+    mcpRPCServer = null
+    mcpFactoryCode = null
   }
 
   // Create executor with default run args
@@ -181,8 +204,10 @@ The last expression in your code will be returned as the result.
             content: [{
               type: 'text',
               text:
-                `<status>error</status>\n<error>\n<type>dependency-not-allowed</type>\n<message>The following dependencies are not allowed:\n\n${validation.errors.join('\n')
-                }\n\nAllowed dependencies: ${isRestrictive ? allowedDependencies.join(', ') : 'all'
+                `<status>error</status>\n<error>\n<type>dependency-not-allowed</type>\n<message>The following dependencies are not allowed:\n\n${
+                  validation.errors.join('\n')
+                }\n\nAllowed dependencies: ${
+                  isRestrictive ? allowedDependencies.join(', ') : 'all'
                 }</message>\n</error>`,
             }],
           }
@@ -240,7 +265,7 @@ The last expression in your code will be returned as the result.
       {
         title: proxyTools.list_mcp_servers.tool.title,
         description: proxyTools.list_mcp_servers.tool.description,
-        inputSchema: proxyTools.list_mcp_servers.tool.inputSchema
+        inputSchema: proxyTools.list_mcp_servers.tool.inputSchema,
       },
       async () => {
         const result = await proxyTools.list_mcp_servers.handler()
@@ -249,10 +274,10 @@ The last expression in your code will be returned as the result.
             type: 'text',
             text: returnMode === 'xml'
               ? `<servers>${JSON.stringify(result.servers, null, 2)}</servers>`
-              : JSON.stringify(result)
-          }]
+              : JSON.stringify(result),
+          }],
         }
-      }
+      },
     )
 
     server.registerTool(
@@ -260,7 +285,7 @@ The last expression in your code will be returned as the result.
       {
         title: proxyTools.get_tool_details.tool.title,
         description: proxyTools.get_tool_details.tool.description,
-        inputSchema: proxyTools.get_tool_details.tool.inputSchema
+        inputSchema: proxyTools.get_tool_details.tool.inputSchema,
       },
       async ({ server: serverName, tools }: { server: string; tools?: string[] }) => {
         const result = await proxyTools.get_tool_details.handler({ server: serverName, tools })
@@ -269,20 +294,20 @@ The last expression in your code will be returned as the result.
             type: 'text',
             text: returnMode === 'xml'
               ? `<tools>${JSON.stringify(result.tools, null, 2)}</tools>`
-              : JSON.stringify(result)
-          }]
+              : JSON.stringify(result),
+          }],
         }
-      }
+      },
     )
   }
 
   // Store references for cleanup
   const serverWithCleanup = server as McpServer & {
-    _mcpManager?: MCPManager
-    _mcpRPCServer?: MCPRPCServer
+    _mcpManager?: MCPManager | null
+    _mcpRPCServer?: MCPRPCServer | null
   }
   serverWithCleanup._mcpManager = mcpManager
-  serverWithCleanup._mcpRPCServer = mcpRPCServer ?? undefined
+  serverWithCleanup._mcpRPCServer = mcpRPCServer
 
   return server
 }

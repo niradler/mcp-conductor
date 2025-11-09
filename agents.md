@@ -8,9 +8,14 @@
 
 ## Project Overview
 
-**MCP Conductor** is a production-ready MCP server that provides secure, sandboxed execution of TypeScript and JavaScript code for AI agents. Built on Deno's security-first runtime, it enables LLMs to run code with fine-grained permission control configured entirely by administrators via environment variables.
+**MCP Conductor** is a production-ready MCP server that provides secure, sandboxed execution of
+TypeScript and JavaScript code for AI agents. Built on Deno's security-first runtime, it enables
+LLMs to run code with fine-grained permission control configured entirely by administrators via
+environment variables.
 
-**Key Innovation**: Admin-controlled permissions via environment variables - LLMs execute code with zero ability to escalate privileges. Achieves complete security separation between server process and user code subprocesses.
+**Key Innovation**: Admin-controlled permissions via environment variables - LLMs execute code with
+zero ability to escalate privileges. Achieves complete security separation between server process
+and user code subprocesses.
 
 ---
 
@@ -35,6 +40,7 @@ The MCP Conductor v0.1.0 is complete and ready for production use:
 - ✅ Ready for IDE integration
 
 **Stats**:
+
 - **Files**: 15 source files
 - **Lines of Code**: ~2,500 lines
 - **Tests**: 21 tests (executor, permissions, integration)
@@ -42,6 +48,7 @@ The MCP Conductor v0.1.0 is complete and ready for production use:
 - **Documentation**: README, ENV_VARS, SECURITY guides
 
 **IDE Integration**:
+
 - Claude Desktop: Configure via `~/Library/Application Support/Claude/claude_desktop_config.json`
 - Cursor: Use `.cursor/mcp.json`
 - VS Code/Cline: Use `.mcp/settings.json`
@@ -222,6 +229,7 @@ deno check src/**/*.ts  # Type check
 ```
 
 This configuration:
+
 - ✅ Restricts filesystem access to workspace only
 - ✅ No network access by default
 - ✅ Only 2 packages allowed
