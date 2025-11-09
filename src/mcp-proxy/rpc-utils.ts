@@ -4,12 +4,12 @@ import { MCP_PROXY_CONSTANTS } from './constants.ts'
 export async function mcpRpcCall(
   rpcUrl: string,
   authToken: string,
-  request: MCPRPCRequest
+  request: MCPRPCRequest,
 ): Promise<unknown> {
   const controller = new AbortController()
   const timeoutId = setTimeout(
     () => controller.abort(),
-    MCP_PROXY_CONSTANTS.RPC.REQUEST_TIMEOUT_MS
+    MCP_PROXY_CONSTANTS.RPC.REQUEST_TIMEOUT_MS,
   )
 
   try {
@@ -38,4 +38,3 @@ export async function mcpRpcCall(
     clearTimeout(timeoutId)
   }
 }
-

@@ -311,8 +311,8 @@ ${trimmedCode}
       wrappedCode = isLikelyExpression && precedingLines
         ? `${precedingLines}\nreturn ${lastLine}`
         : isLikelyExpression
-          ? `return ${lastLine}`
-          : trimmedCode
+        ? `return ${lastLine}`
+        : trimmedCode
     }
 
     return `

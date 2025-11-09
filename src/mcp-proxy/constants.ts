@@ -14,4 +14,3 @@ export const MCP_PROXY_CONSTANTS = {
     MAX_ENTRIES: 10000,
   },
 } as const
-

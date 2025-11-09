@@ -52,7 +52,10 @@ export class MCPRPCServer {
     })
   }
 
-  private async handleRPCRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  private async handleRPCRequest(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ): Promise<void> {
     try {
       // Check authentication
       const authHeader = req.headers['authorization']
@@ -84,7 +87,7 @@ export class MCPRPCServer {
             result = await this.manager.callTool(
               request.server,
               request.args[0] as string,
-              request.args[1]
+              request.args[1],
             )
             break
 
@@ -100,7 +103,7 @@ export class MCPRPCServer {
             validateRPCArgs(request.args, 1, 'readResource')
             result = await this.manager.readResource(
               request.server,
-              request.args[0] as string
+              request.args[0] as string,
             )
             break
 
@@ -113,7 +116,7 @@ export class MCPRPCServer {
             result = await this.manager.getPrompt(
               request.server,
               request.args[0] as string,
-              request.args[1]
+              request.args[1],
             )
             break
 
@@ -126,7 +129,7 @@ export class MCPRPCServer {
 
       const response: MCPRPCResponse = {
         result,
-        error
+        error,
       }
 
       res.statusCode = 200
@@ -137,7 +140,7 @@ export class MCPRPCServer {
       res.statusCode = 500
       res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify({
-        error: err instanceof Error ? err.message : String(err)
+        error: err instanceof Error ? err.message : String(err),
       }))
     }
   }
@@ -190,4 +193,3 @@ export class MCPRPCServer {
     }
   }
 }
-

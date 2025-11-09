@@ -204,8 +204,10 @@ The last expression in your code will be returned as the result.
             content: [{
               type: 'text',
               text:
-                `<status>error</status>\n<error>\n<type>dependency-not-allowed</type>\n<message>The following dependencies are not allowed:\n\n${validation.errors.join('\n')
-                }\n\nAllowed dependencies: ${isRestrictive ? allowedDependencies.join(', ') : 'all'
+                `<status>error</status>\n<error>\n<type>dependency-not-allowed</type>\n<message>The following dependencies are not allowed:\n\n${
+                  validation.errors.join('\n')
+                }\n\nAllowed dependencies: ${
+                  isRestrictive ? allowedDependencies.join(', ') : 'all'
                 }</message>\n</error>`,
             }],
           }
@@ -263,7 +265,7 @@ The last expression in your code will be returned as the result.
       {
         title: proxyTools.list_mcp_servers.tool.title,
         description: proxyTools.list_mcp_servers.tool.description,
-        inputSchema: proxyTools.list_mcp_servers.tool.inputSchema
+        inputSchema: proxyTools.list_mcp_servers.tool.inputSchema,
       },
       async () => {
         const result = await proxyTools.list_mcp_servers.handler()
@@ -272,10 +274,10 @@ The last expression in your code will be returned as the result.
             type: 'text',
             text: returnMode === 'xml'
               ? `<servers>${JSON.stringify(result.servers, null, 2)}</servers>`
-              : JSON.stringify(result)
-          }]
+              : JSON.stringify(result),
+          }],
         }
-      }
+      },
     )
 
     server.registerTool(
@@ -283,7 +285,7 @@ The last expression in your code will be returned as the result.
       {
         title: proxyTools.get_tool_details.tool.title,
         description: proxyTools.get_tool_details.tool.description,
-        inputSchema: proxyTools.get_tool_details.tool.inputSchema
+        inputSchema: proxyTools.get_tool_details.tool.inputSchema,
       },
       async ({ server: serverName, tools }: { server: string; tools?: string[] }) => {
         const result = await proxyTools.get_tool_details.handler({ server: serverName, tools })
@@ -292,10 +294,10 @@ The last expression in your code will be returned as the result.
             type: 'text',
             text: returnMode === 'xml'
               ? `<tools>${JSON.stringify(result.tools, null, 2)}</tools>`
-              : JSON.stringify(result)
-          }]
+              : JSON.stringify(result),
+          }],
         }
-      }
+      },
     )
   }
 

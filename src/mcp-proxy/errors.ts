@@ -5,7 +5,7 @@ export class MCPProxyError extends Error {
   constructor(
     message: string,
     code: string,
-    cause?: Error
+    cause?: Error,
   ) {
     super(message)
     this.name = 'MCPProxyError'
@@ -16,18 +16,18 @@ export class MCPProxyError extends Error {
 
 export function validateServerExists(
   entry: { error: string | null } | undefined,
-  serverName: string
+  serverName: string,
 ): asserts entry is { error: string | null } {
   if (!entry) {
     throw new MCPProxyError(
       `MCP server "${serverName}" not found`,
-      'SERVER_NOT_FOUND'
+      'SERVER_NOT_FOUND',
     )
   }
   if (entry.error) {
     throw new MCPProxyError(
       `MCP server "${serverName}" failed to connect: ${entry.error}`,
-      'SERVER_CONNECT_FAILED'
+      'SERVER_CONNECT_FAILED',
     )
   }
 }
@@ -36,14 +36,13 @@ export function validateRPCArgs(args: unknown[], expectedLength: number, method:
   if (!Array.isArray(args)) {
     throw new MCPProxyError(
       `Invalid args for ${method}: expected array`,
-      'INVALID_ARGS'
+      'INVALID_ARGS',
     )
   }
   if (args.length < expectedLength) {
     throw new MCPProxyError(
       `Invalid args for ${method}: expected at least ${expectedLength}, got ${args.length}`,
-      'INVALID_ARGS_LENGTH'
+      'INVALID_ARGS_LENGTH',
     )
   }
 }
-

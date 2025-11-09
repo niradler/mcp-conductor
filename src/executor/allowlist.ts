@@ -47,7 +47,7 @@ function isValidPackageSpecifier(dependency: string): boolean {
   if (!rest) return false
 
   // Check for suspicious characters that could be injection attempts
-  const suspiciousChars = [';', '\n', '\r', '\'', '"', '`', '\\', '$', '(', ')']
+  const suspiciousChars = [';', '\n', '\r', "'", '"', '`', '\\', '$', '(', ')']
   if (suspiciousChars.some((char) => rest.includes(char))) {
     return false
   }

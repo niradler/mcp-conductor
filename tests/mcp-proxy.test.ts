@@ -16,8 +16,8 @@ Deno.test({
     assertEquals(Array.isArray(servers), true)
 
     await manager.shutdown()
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  },
 })
 
 Deno.test('MCP Proxy - generateMcpFactoryCode', () => {
@@ -54,8 +54,8 @@ Deno.test({
 
     await rpcServer.stop()
     await manager.shutdown()
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  },
 })
 
 Deno.test({
@@ -70,7 +70,6 @@ Deno.test({
     assertEquals(Array.isArray(servers), true)
 
     await manager.shutdown()
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  },
 })
-

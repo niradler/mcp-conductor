@@ -104,4 +104,3 @@ globalThis.mcpFactory = {
 };
 `.trim()
 }
-

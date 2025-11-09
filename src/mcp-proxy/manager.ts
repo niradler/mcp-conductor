@@ -11,7 +11,13 @@ interface MCPClientEntry {
   client: Client | null
   tools: Tool[]
   resources: Array<{ uri: string; name: string; description?: string }>
-  prompts: Array<{ name: string; description?: string; arguments?: Array<{ name: string; description?: string; required?: boolean }> }>
+  prompts: Array<
+    {
+      name: string
+      description?: string
+      arguments?: Array<{ name: string; description?: string; required?: boolean }>
+    }
+  >
   description: string
   error: string | null
 }
@@ -46,42 +52,45 @@ export class MCPManager {
     const validation = validateConfig(this.config)
     if (!validation.valid) {
       console.error('Invalid MCP config:')
-      validation.errors.forEach(err => console.error(`  - ${err}`))
+      validation.errors.forEach((err) => console.error(`  - ${err}`))
       return
     }
 
     this.configHash = await calculateConfigHash()
 
     const serverNames = Object.keys(this.config.mcpServers).filter(
-      name => !this.config!.mcpServers[name].disabled
+      (name) => !this.config!.mcpServers[name].disabled,
     )
 
     console.error(`Initializing ${serverNames.length} MCP server(s)...`)
 
     await Promise.all(
-      serverNames.map(name => this.initializeClient(name, this.config!.mcpServers[name]))
+      serverNames.map((name) => this.initializeClient(name, this.config!.mcpServers[name])),
     )
 
-    const successCount = Array.from(this.clients.values()).filter(e => e.client !== null).length
+    const successCount = Array.from(this.clients.values()).filter((e) => e.client !== null).length
     console.error(`MCP servers initialized: ${successCount}/${serverNames.length} successful`)
   }
 
-  private async initializeClient(name: string, config: MCPServerConfig['mcpServers'][string]): Promise<void> {
+  private async initializeClient(
+    name: string,
+    config: MCPServerConfig['mcpServers'][string],
+  ): Promise<void> {
     const entry: MCPClientEntry = {
       client: null,
       tools: [],
       resources: [],
       prompts: [],
       description: '',
-      error: null
+      error: null,
     }
 
     try {
       const client = new Client({
         name: 'mcp-conductor-proxy',
-        version: MCP_PROXY_CONSTANTS.MANAGER.CLIENT_VERSION
+        version: MCP_PROXY_CONSTANTS.MANAGER.CLIENT_VERSION,
       }, {
-        capabilities: {}
+        capabilities: {},
       })
 
       let transport: StdioClientTransport | SSEClientTransport
@@ -90,7 +99,7 @@ export class MCPManager {
         transport = new StdioClientTransport({
           command: config.command,
           args: config.args || [],
-          env: config.env
+          env: config.env,
         })
       } else if ('url' in config && config.url) {
         transport = new SSEClientTransport(new URL(config.url))
@@ -122,7 +131,9 @@ export class MCPManager {
 
       entry.client = client
 
-      console.error(`✓ MCP server "${name}" connected: ${entry.tools.length} tools, ${entry.resources.length} resources, ${entry.prompts.length} prompts`)
+      console.error(
+        `✓ MCP server "${name}" connected: ${entry.tools.length} tools, ${entry.resources.length} resources, ${entry.prompts.length} prompts`,
+      )
     } catch (error) {
       entry.error = error instanceof Error ? error.message : String(error)
       console.error(`✗ MCP server "${name}" failed: ${entry.error}`)
@@ -154,9 +165,9 @@ export class MCPManager {
     for (const entry of this.clients.values()) {
       if (entry.client) {
         disconnectPromises.push(
-          entry.client.close().catch(err => {
+          entry.client.close().catch((err) => {
             console.error('Error disconnecting client:', err)
-          })
+          }),
         )
       }
     }
@@ -173,11 +184,13 @@ export class MCPManager {
     const servers: MCPServerInfo[] = []
 
     for (const [name, entry] of this.clients.entries()) {
-      const sampleTools = entry.tools.slice(0, MCP_PROXY_CONSTANTS.MANAGER.MAX_SAMPLE_TOOLS).map(tool => {
-        const params = this.formatToolParams(tool)
-        const description = tool.description || 'No description'
-        return `${tool.name}(${params}) - ${description}`
-      })
+      const sampleTools = entry.tools.slice(0, MCP_PROXY_CONSTANTS.MANAGER.MAX_SAMPLE_TOOLS).map(
+        (tool) => {
+          const params = this.formatToolParams(tool)
+          const description = tool.description || 'No description'
+          return `${tool.name}(${params}) - ${description}`
+        },
+      )
 
       servers.push({
         name,
@@ -186,7 +199,7 @@ export class MCPManager {
         resources: entry.resources.length,
         prompts: entry.prompts.length,
         sample_tools: sampleTools,
-        error: entry.error
+        error: entry.error,
       })
     }
 
@@ -212,13 +225,13 @@ export class MCPManager {
     let tools = entry.tools
 
     if (toolNames && toolNames.length > 0) {
-      tools = tools.filter(t => toolNames.includes(t.name))
+      tools = tools.filter((t) => toolNames.includes(t.name))
     }
 
-    return tools.map(tool => ({
+    return tools.map((tool) => ({
       name: tool.name,
       description: tool.description || '',
-      inputSchema: tool.inputSchema || { type: 'object' }
+      inputSchema: tool.inputSchema || { type: 'object' },
     }))
   }
 
@@ -226,7 +239,7 @@ export class MCPManager {
     const client = this.getClientSafe(serverName)
     return await client.callTool({
       name: toolName,
-      arguments: args as Record<string, unknown>
+      arguments: args as Record<string, unknown>,
     })
   }
 
@@ -234,7 +247,9 @@ export class MCPManager {
     return this.validateEntry(serverName).tools
   }
 
-  async listResources(serverName: string): Promise<Array<{ uri: string; name: string; description?: string }>> {
+  async listResources(
+    serverName: string,
+  ): Promise<Array<{ uri: string; name: string; description?: string }>> {
     return this.validateEntry(serverName).resources
   }
 
@@ -251,7 +266,7 @@ export class MCPManager {
     const client = this.getClientSafe(serverName)
     return await client.getPrompt({
       name: promptName,
-      arguments: args as Record<string, string>
+      arguments: args as Record<string, string>,
     })
   }
 
@@ -261,4 +276,3 @@ export class MCPManager {
     this.clients.clear()
   }
 }
-
