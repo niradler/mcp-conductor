@@ -11,16 +11,10 @@ export class MCPRPCServer {
   private port: number = 0
   private manager: MCPManager
   private authToken: string
-  private requestCounts: Map<string, { count: number; resetAt: number }> = new Map()
-  private cleanupInterval: number
 
   constructor(manager: MCPManager) {
     this.manager = manager
     this.authToken = randomBytes(32).toString('hex')
-    this.cleanupInterval = setInterval(
-      () => this.cleanupRateLimitMap(),
-      MCP_PROXY_CONSTANTS.RATE_LIMIT.CLEANUP_INTERVAL_MS
-    )
   }
 
   getAuthToken(): string {
@@ -60,7 +54,7 @@ export class MCPRPCServer {
 
   private async handleRPCRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     try {
-      // 1. Check authentication
+      // Check authentication
       const authHeader = req.headers['authorization']
       if (authHeader !== `Bearer ${this.authToken}`) {
         res.statusCode = 401
@@ -69,22 +63,13 @@ export class MCPRPCServer {
         return
       }
 
-      // 2. Check rate limiting
-      const clientId = req.socket.remoteAddress || 'unknown'
-      if (!this.checkRateLimit(clientId)) {
-        res.statusCode = 429
-        res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify({ error: 'Rate limit exceeded' }))
-        return
-      }
-
-      // 3. Get body with size limit
+      // Get body with size limit
       const body = await this.getRequestBody(req)
-      
-      // 4. Validate and parse request
+
+      // Validate and parse request
       const request = JSON.parse(body) as MCPRPCRequest
-      
-      // 5. Validate server name (prevent path traversal)
+
+      // Validate server name (prevent path traversal)
       if (!this.isValidServerName(request.server)) {
         throw new Error('Invalid server name')
       }
@@ -157,45 +142,6 @@ export class MCPRPCServer {
     }
   }
 
-  private cleanupRateLimitMap(): void {
-    const now = Date.now()
-    const toDelete: string[] = []
-    
-    for (const [clientId, record] of this.requestCounts.entries()) {
-      if (now > record.resetAt) {
-        toDelete.push(clientId)
-      }
-    }
-    
-    for (const clientId of toDelete) {
-      this.requestCounts.delete(clientId)
-    }
-    
-    if (this.requestCounts.size > MCP_PROXY_CONSTANTS.RATE_LIMIT.MAX_ENTRIES) {
-      console.error(`Warning: Rate limit map size (${this.requestCounts.size}) exceeds max`)
-    }
-  }
-
-  private checkRateLimit(clientId: string): boolean {
-    const now = Date.now()
-    const record = this.requestCounts.get(clientId)
-    
-    if (!record || now > record.resetAt) {
-      this.requestCounts.set(clientId, {
-        count: 1,
-        resetAt: now + MCP_PROXY_CONSTANTS.RPC.RATE_LIMIT_WINDOW_MS
-      })
-      return true
-    }
-    
-    if (record.count >= MCP_PROXY_CONSTANTS.RPC.RATE_LIMIT_MAX_REQUESTS) {
-      return false
-    }
-    
-    record.count++
-    return true
-  }
-
   private isValidServerName(serverName: string): boolean {
     // Only alphanumeric, dash, underscore
     return /^[a-zA-Z0-9_-]+$/.test(serverName)
@@ -205,16 +151,16 @@ export class MCPRPCServer {
     return new Promise((resolve, reject) => {
       const bodyParts: Buffer[] = []
       let totalSize = 0
-      
+
       req.on('data', (chunk: Buffer) => {
         totalSize += chunk.length
-        
+
         if (totalSize > MCP_PROXY_CONSTANTS.RPC.MAX_BODY_SIZE) {
           req.destroy()
           reject(new Error('Request body too large'))
           return
         }
-        
+
         bodyParts.push(chunk)
       })
       req.on('end', () => {
@@ -230,8 +176,6 @@ export class MCPRPCServer {
   }
 
   async stop(): Promise<void> {
-    clearInterval(this.cleanupInterval)
-    
     if (this.server) {
       return new Promise((resolve, reject) => {
         this.server!.close((err) => {

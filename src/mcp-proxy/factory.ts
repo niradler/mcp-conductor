@@ -30,7 +30,7 @@ async function mcpRpcCall(rpcUrl, authToken, request) {
   }
 }
 
-const mcpFactory = {
+globalThis.mcpFactory = {
   _rpcUrl: 'http://localhost:${rpcPort}/mcp-rpc',
   _authToken: '${authToken}',
   
@@ -39,11 +39,25 @@ const mcpFactory = {
     
     return {
       async callTool(name, args) {
-        return await mcpRpcCall(factory._rpcUrl, factory._authToken, {
+        const result = await mcpRpcCall(factory._rpcUrl, factory._authToken, {
           server: serverName,
           method: 'callTool',
           args: [name, args]
         });
+        
+        // Extract data from MCP response format
+        if (result && result.content && Array.isArray(result.content) && result.content.length > 0) {
+          const firstContent = result.content[0];
+          if (firstContent.type === 'text' && firstContent.text) {
+            try {
+              return JSON.parse(firstContent.text);
+            } catch {
+              return firstContent.text;
+            }
+          }
+        }
+        
+        return result;
       },
       
       async listTools() {

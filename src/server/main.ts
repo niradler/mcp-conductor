@@ -42,19 +42,42 @@ export async function createServer(config: ServerConfig = {}): Promise<McpServer
   // Get default run args (used when no permissions specified)
   const defaultRunArgs = finalConfig.defaultRunArgs ?? []
 
-  // Initialize MCP proxy manager
-  const mcpManager = new MCPManager()
-  await mcpManager.initialize()
-
-  // Start RPC server for MCP proxy
+  // Initialize MCP proxy manager with error handling
+  let mcpManager: MCPManager | null = null
   let mcpRPCServer: MCPRPCServer | null = null
   let mcpFactoryCode: string | null = null
 
-  if (mcpManager) {
-    mcpRPCServer = new MCPRPCServer(mcpManager)
-    const rpcPort = await mcpRPCServer.start()
-    const authToken = mcpRPCServer.getAuthToken()
-    mcpFactoryCode = generateMcpFactoryCode(rpcPort, authToken)
+  try {
+    mcpManager = new MCPManager()
+    await mcpManager.initialize()
+
+    const serverList = mcpManager.listServers()
+    if (serverList.length > 0) {
+      mcpRPCServer = new MCPRPCServer(mcpManager)
+      const rpcPort = await mcpRPCServer.start()
+      const authToken = mcpRPCServer.getAuthToken()
+      mcpFactoryCode = generateMcpFactoryCode(rpcPort, authToken)
+    }
+  } catch (err) {
+    console.error('Failed to initialize MCP proxy:', err)
+    // Cleanup any resources that were created
+    if (mcpRPCServer) {
+      try {
+        await mcpRPCServer.stop()
+      } catch (stopErr) {
+        console.error('Error stopping RPC server during cleanup:', stopErr)
+      }
+    }
+    if (mcpManager) {
+      try {
+        await mcpManager.shutdown()
+      } catch (shutdownErr) {
+        console.error('Error shutting down manager during cleanup:', shutdownErr)
+      }
+    }
+    mcpManager = null
+    mcpRPCServer = null
+    mcpFactoryCode = null
   }
 
   // Create executor with default run args
@@ -278,11 +301,11 @@ The last expression in your code will be returned as the result.
 
   // Store references for cleanup
   const serverWithCleanup = server as McpServer & {
-    _mcpManager?: MCPManager
-    _mcpRPCServer?: MCPRPCServer
+    _mcpManager?: MCPManager | null
+    _mcpRPCServer?: MCPRPCServer | null
   }
   serverWithCleanup._mcpManager = mcpManager
-  serverWithCleanup._mcpRPCServer = mcpRPCServer ?? undefined
+  serverWithCleanup._mcpRPCServer = mcpRPCServer
 
   return server
 }

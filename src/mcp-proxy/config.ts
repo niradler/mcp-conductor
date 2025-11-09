@@ -65,20 +65,23 @@ export function validateConfig(config: MCPServerConfig): { valid: boolean; error
   }
   
   for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
-    if (!serverConfig.command && !serverConfig.url) {
+    const hasCommand = 'command' in serverConfig
+    const hasUrl = 'url' in serverConfig
+    
+    if (!hasCommand && !hasUrl) {
       errors.push(`Server "${name}": must have either command or url`)
     }
     
-    if (serverConfig.command && serverConfig.url) {
+    if (hasCommand && hasUrl) {
       errors.push(`Server "${name}": cannot have both command and url`)
     }
     
-    if (serverConfig.command && !serverConfig.args) {
+    if (hasCommand && !serverConfig.args) {
       errors.push(`Server "${name}": command requires args array`)
     }
     
-    if (serverConfig.url && !serverConfig.transport) {
-      serverConfig.transport = 'sse'
+    if (hasUrl && !('transport' in serverConfig)) {
+      (serverConfig as any).transport = 'sse'
     }
   }
   

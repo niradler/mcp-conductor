@@ -37,7 +37,7 @@ export class MCPManager {
 
   async initialize(): Promise<void> {
     this.config = await loadConfig()
-    
+
     if (!this.config) {
       console.error('No MCP proxy config found, MCP proxy features disabled')
       return
@@ -51,17 +51,17 @@ export class MCPManager {
     }
 
     this.configHash = await calculateConfigHash()
-    
+
     const serverNames = Object.keys(this.config.mcpServers).filter(
       name => !this.config!.mcpServers[name].disabled
     )
-    
+
     console.error(`Initializing ${serverNames.length} MCP server(s)...`)
-    
+
     await Promise.all(
       serverNames.map(name => this.initializeClient(name, this.config!.mcpServers[name]))
     )
-    
+
     const successCount = Array.from(this.clients.values()).filter(e => e.client !== null).length
     console.error(`MCP servers initialized: ${successCount}/${serverNames.length} successful`)
   }
@@ -86,42 +86,42 @@ export class MCPManager {
 
       let transport: StdioClientTransport | SSEClientTransport
 
-      if (config.command) {
+      if ('command' in config && config.command) {
         transport = new StdioClientTransport({
           command: config.command,
           args: config.args || [],
           env: config.env
         })
-      } else if (config.url) {
+      } else if ('url' in config && config.url) {
         transport = new SSEClientTransport(new URL(config.url))
       } else {
         throw new Error('No command or url specified')
       }
 
       await client.connect(transport)
-      
+
       const serverInfo = client.getServerVersion()
       entry.description = serverInfo?.name || name
-      
+
       const toolsResult = await client.listTools()
       entry.tools = toolsResult.tools || []
-      
+
       try {
         const resourcesResult = await client.listResources()
         entry.resources = resourcesResult.resources || []
       } catch {
         entry.resources = []
       }
-      
+
       try {
         const promptsResult = await client.listPrompts()
         entry.prompts = promptsResult.prompts || []
       } catch {
         entry.prompts = []
       }
-      
+
       entry.client = client
-      
+
       console.error(`✓ MCP server "${name}" connected: ${entry.tools.length} tools, ${entry.resources.length} resources, ${entry.prompts.length} prompts`)
     } catch (error) {
       entry.error = error instanceof Error ? error.message : String(error)
@@ -133,24 +133,24 @@ export class MCPManager {
 
   async reloadIfNeeded(): Promise<boolean> {
     const currentHash = await calculateConfigHash()
-    
+
     if (currentHash === this.configHash) {
       return false
     }
-    
+
     console.error('MCP config changed, reloading...')
-    
+
     await this.disconnectAll()
     this.clients.clear()
-    
+
     await this.initialize()
-    
+
     return true
   }
 
   private async disconnectAll(): Promise<void> {
     const disconnectPromises: Promise<void>[] = []
-    
+
     for (const entry of this.clients.values()) {
       if (entry.client) {
         disconnectPromises.push(
@@ -160,7 +160,7 @@ export class MCPManager {
         )
       }
     }
-    
+
     await Promise.all(disconnectPromises)
   }
 
@@ -171,14 +171,14 @@ export class MCPManager {
 
   listServers(): MCPServerInfo[] {
     const servers: MCPServerInfo[] = []
-    
+
     for (const [name, entry] of this.clients.entries()) {
       const sampleTools = entry.tools.slice(0, MCP_PROXY_CONSTANTS.MANAGER.MAX_SAMPLE_TOOLS).map(tool => {
         const params = this.formatToolParams(tool)
         const description = tool.description || 'No description'
         return `${tool.name}(${params}) - ${description}`
       })
-      
+
       servers.push({
         name,
         description: entry.description || name,
@@ -189,7 +189,7 @@ export class MCPManager {
         error: entry.error
       })
     }
-    
+
     return servers
   }
 
@@ -210,11 +210,11 @@ export class MCPManager {
   getToolDetails(serverName: string, toolNames?: string[]): MCPToolDetails[] {
     const entry = this.validateEntry(serverName)
     let tools = entry.tools
-    
+
     if (toolNames && toolNames.length > 0) {
       tools = tools.filter(t => toolNames.includes(t.name))
     }
-    
+
     return tools.map(tool => ({
       name: tool.name,
       description: tool.description || '',

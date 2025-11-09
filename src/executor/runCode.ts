@@ -21,9 +21,8 @@ export class RunCode {
   private readonly defaultRunArgs: string[] = []
   private mcpFactoryCode: string | null = null
 
-  constructor(defaultRunArgs?: string[], mcpFactoryCode?: string) {
+  constructor(defaultRunArgs?: string[]) {
     this.defaultRunArgs = defaultRunArgs ?? []
-    this.mcpFactoryCode = mcpFactoryCode ?? null
   }
 
   setMcpFactoryCode(code: string | null): void {
@@ -185,8 +184,10 @@ export class RunCode {
     globals?: Record<string, unknown>,
     _dependencies?: string[],
   ): string {
-    const mcpFactoryInjection = this.mcpFactoryCode ? `${this.mcpFactoryCode}\n\n` : ''
-    
+    const mcpFactoryInjection = this.mcpFactoryCode
+      ? `try {\n${this.mcpFactoryCode}\n} catch (e) {\n  console.error('Failed to initialize MCP factory:', e);\n}\n\n`
+      : ''
+
     const globalsCode = globals
       ? Object.entries(globals)
         .map(([key, value]) => `const ${key} = ${JSON.stringify(value)};`)
@@ -310,8 +311,8 @@ ${trimmedCode}
       wrappedCode = isLikelyExpression && precedingLines
         ? `${precedingLines}\nreturn ${lastLine}`
         : isLikelyExpression
-        ? `return ${lastLine}`
-        : trimmedCode
+          ? `return ${lastLine}`
+          : trimmedCode
     }
 
     return `
