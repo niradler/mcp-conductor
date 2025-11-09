@@ -25,6 +25,7 @@ environment variables.
 - ⚡ **Fast & Isolated**: Fresh subprocess per execution with <100ms startup
 - 🚫 **No Escalation**: LLMs cannot request additional permissions
 - 📁 **Workspace Isolation**: Filesystem access restricted to configured directory
+- 🔌 **MCP Proxy**: Connect to multiple MCP servers and call their tools from within executed code
 
 ---
 
@@ -34,7 +35,7 @@ environment variables.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/mcp-conductor
+git clone https://github.com/niradler/mcp-conductor
 cd mcp-conductor
 
 # Deno will auto-install dependencies on first run
@@ -90,6 +91,109 @@ processed;
 
 ---
 
+## MCP Proxy: Access Multiple MCP Servers from Code 🔌
+
+MCP Conductor can act as a proxy to connect to multiple MCP servers, allowing your executed code to interact with various MCP tools seamlessly. This enables powerful multi-system workflows within a single code execution.
+
+### How It Works
+
+1. **Configure MCP Servers**: Create a `mcp-config.json` file listing the MCP servers you want to connect to
+2. **Auto-Injected `mcpFactory`**: A global `mcpFactory` object is automatically available in your code
+3. **Load & Call Tools**: Use `mcpFactory.load(serverName)` to access any configured MCP server's tools
+
+### Setting Up MCP Proxy
+
+Create `~/.mcp-conductor/mcp-config.json` (or set via `MCP_CONDUCTOR_MCP_CONFIG` env var):
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/directory"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token-here"
+      }
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    }
+  }
+}
+```
+
+### Example: Using Multiple MCP Servers
+
+```typescript
+// The LLM can write code that uses multiple MCP servers:
+
+// List available MCP servers
+const servers = await mcpFactory.listServers();
+console.log('Available servers:', servers);
+
+// Load the GitHub MCP server
+const github = await mcpFactory.load('github');
+
+// Call tools from the GitHub server
+const repos = await github.callTool('list_repos', { 
+  username: 'octocat' 
+});
+console.log('Found repositories:', repos);
+
+// Load the filesystem server
+const fs = await mcpFactory.load('filesystem');
+
+// Save the results
+await fs.callTool('write_file', {
+  path: '/allowed/directory/repos.json',
+  content: JSON.stringify(repos, null, 2)
+});
+
+'Multi-server workflow complete!'
+```
+
+### Available MCP Proxy Tools
+
+MCP Conductor also exposes these tools for discovering available MCP servers:
+
+- **`list_mcp_servers`**: List all configured MCP servers and their status
+- **`get_tool_details`**: Get detailed information about tools from a specific MCP server
+
+### Example: Query Before Using
+
+```typescript
+// First, discover what servers are available
+// (using the list_mcp_servers tool, separate from code execution)
+
+// Then write code that uses those servers
+const github = await mcpFactory.load('github');
+const tools = await github.listTools();
+console.log(`GitHub server has ${tools.length} tools available`);
+
+// Use a specific tool
+const issues = await github.callTool('search_issues', {
+  query: 'is:open label:bug',
+  repo: 'myorg/myrepo'
+});
+
+`Found ${issues.length} open bugs`;
+```
+
+### Security Considerations
+
+- MCP servers run as **separate processes** with their own permissions
+- The code execution sandbox still follows all normal security restrictions
+- Set `--allow-run` permission to allow spawning MCP server processes
+- Configure allowed binaries carefully (e.g., `--allow-run=node,npx,deno`)
+- MCP server environment variables (like API tokens) are isolated from your code
+
+---
+
 ## Configuration
 
 ### Environment Variables
@@ -103,306 +207,242 @@ Configure MCP Conductor's behavior via environment variables in your MCP config:
 | `MCP_CONDUCTOR_RUN_ARGS`         | Default Deno permissions | `allow-read=/workspace,allow-write=/workspace` |
 | `MCP_CONDUCTOR_DEFAULT_TIMEOUT`  | Default timeout (ms)     | `30000`                                        |
 | `MCP_CONDUCTOR_MAX_TIMEOUT`      | Maximum timeout (ms)     | `300000`                                       |
+| `MCP_CONDUCTOR_MCP_CONFIG`       | Path to MCP proxy config | `${userHome}/.mcp-conductor/mcp-config.json`   |
 
 See [docs/ENV_VARS.md](docs/ENV_VARS.md) for detailed configuration guide.
-
----
-
-## Installation
-
-### Prerequisites
-
-```bash
-# Install Deno (2.x or higher)
-curl -fsSL https://deno.land/install.sh | sh
-
-# Verify
-deno --version
-```
-
-### Install Conductor
-
-```bash
-# Via deno (recommended)
-deno install -A -n conductor jsr:@conductor/cli
-
-# Or clone and build
-git clone https://github.com/conductor/conductor.git
-cd conductor
-deno task build
-```
-
----
-
-## Quick Start
-
-### 1. Configure MCP Servers
-
-Create `conductor.config.ts`:
-
-```typescript
-import { ConductorConfig } from "@conductor/orchestrator";
-
-export default {
-  // MCP servers to connect to
-  mcpServers: [
-    {
-      name: "google-drive",
-      command: "uvx",
-      args: ["mcp-server-gdrive"],
-      env: { GOOGLE_TOKEN: Deno.env.get("GOOGLE_TOKEN") },
-    },
-    {
-      name: "salesforce",
-      command: "node",
-      args: ["./mcp-servers/salesforce/index.js"],
-      env: { SF_TOKEN: Deno.env.get("SF_TOKEN") },
-    },
-  ],
-
-  // Catalog configuration
-  catalog: {
-    embeddingModel: "text-embedding-3-small",
-    cacheSpecs: true,
-  },
-
-  // Sandbox configuration
-  sandbox: {
-    allowRead: ["./workspace"],
-    allowWrite: ["./workspace"],
-    timeout: 30000,
-  },
-} satisfies ConductorConfig;
-```
-
-### 2. Start Conductor
-
-```bash
-conductor start --config conductor.config.ts
-```
-
-### 3. Use in Your Agent
-
-```typescript
-import { Conductor } from "@conductor/orchestrator";
-
-// Initialize
-const conductor = new Conductor(config);
-await conductor.start();
-
-// Create conversation
-const convId = conductor.createConversation();
-
-// === Message 1 ===
-const query1 = "Find revenue data from Salesforce";
-
-// Discover relevant tools (semantic search)
-const tools = await conductor.findTools(convId, query1);
-// Returns: [{ name: 'salesforce.query', description: '...', ... }]
-
-// Load full spec for selected tool
-await conductor.loadToolSpec(convId, "salesforce.query");
-
-// Agent writes TypeScript code
-const code1 = `
-import * as sf from './mcp/salesforce';
-
-const opps = await sf.query({
-  query: 'SELECT Amount FROM Opportunity WHERE CloseDate >= 2024-10-01'
-});
-
-console.log('Found', opps.length, 'opportunities');
-`;
-
-// Execute
-const result1 = await conductor.execute(convId, code1);
-console.log(result1.stdout); // "Found 47 opportunities"
-
-// === Message 2 (same conversation) ===
-// Tools already loaded! No catalog search needed.
-// System prompt automatically includes:
-//   "Available modules: import * as sf from './mcp/salesforce';"
-//   "Already loaded: salesforce.query"
-
-const code2 = `
-// sf already imported from message 1!
-const opps = JSON.parse(await Deno.readTextFile('./workspace/opps.json'));
-
-const total = opps.reduce((sum, o) => sum + o.Amount, 0);
-console.log('Total revenue:', total);
-`;
-
-const result2 = await conductor.execute(convId, code2);
-// No catalog overhead! Just execution.
-```
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│         LLM Agent (Claude/GPT/etc)              │
-│  • Discovers tools via semantic search         │
-│  • Writes TypeScript code                      │
-│  • Executes in Deno sandbox                    │
-└────────────────┬────────────────────────────────┘
-                 │
-┌────────────────▼────────────────────────────────┐
-│              Conductor                          │
-│  ┌──────────────────────────────────────────┐  │
-│  │  Intelligent Catalog                     │  │
-│  │  • Semantic search (vector embeddings)   │  │
-│  │  • Conversation-aware filtering          │  │
-│  │  • Co-usage learning                     │  │
-│  └──────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────┐  │
-│  │  Conversation State                      │  │
-│  │  • Tracks loaded tools                   │  │
-│  │  • Manages imported modules              │  │
-│  │  • Persists workspace files              │  │
-│  └──────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────┐  │
-│  │  Code Execution Sandbox                  │  │
-│  │  • Deno runtime (TypeScript-native)      │  │
-│  │  • Permission-based security             │  │
-│  │  • 50-100ms startup                      │  │
-│  └──────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────┐  │
-│  │  MCP Orchestration                       │  │
-│  │  • Connects to N MCP servers             │  │
-│  │  • Auto-generates TypeScript APIs        │  │
-│  │  • Routes tool calls                     │  │
-│  └──────────────────────────────────────────┘  │
-└────────────────┬────────────────────────────────┘
-                 │
-     ┌───────────┼───────────┬──────────────┐
-     │           │           │              │
-┌────▼────┐ ┌────▼────┐ ┌───▼────┐ ┌──────▼──────┐
-│  MCP    │ │  MCP    │ │  MCP   │ │    MCP      │
-│ Server  │ │ Server  │ │ Server │ │   Server    │
-│  (15)   │ │  (23)   │ │  (8)   │ │    (91)     │
-└─────────┘ └─────────┘ └────────┘ └─────────────┘
-              137 tools across 4 servers
+┌──────────────────────────────────────────────────────┐
+│      LLM Agent (Claude Desktop, Cursor, etc.)        │
+│      • Writes TypeScript/JavaScript code             │
+│      • Requests code execution via MCP               │
+└──────────────────────┬───────────────────────────────┘
+                       │ MCP Protocol (stdio/HTTP)
+┌──────────────────────▼───────────────────────────────┐
+│              MCP Conductor Server                    │
+│  ┌────────────────────────────────────────────────┐  │
+│  │  run_deno_code Tool                            │  │
+│  │  • Validates dependencies against allowlist    │  │
+│  │  • Injects mcpFactory for proxy access         │  │
+│  │  • Spawns isolated Deno subprocess             │  │
+│  └────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────┐  │
+│  │  MCP Proxy Manager (Optional)                  │  │
+│  │  • Connects to configured MCP servers          │  │
+│  │  • Manages client connections                  │  │
+│  │  • Provides RPC server for code access         │  │
+│  └────────────────────────────────────────────────┘  │
+│  ┌────────────────────────────────────────────────┐  │
+│  │  MCP Proxy Tools                               │  │
+│  │  • list_mcp_servers - Discover available MCP   │  │
+│  │  • get_tool_details - Get MCP server tool info │  │
+│  └────────────────────────────────────────────────┘  │
+└──────────────────────┬───────────────────────────────┘
+                       │
+         ┌─────────────┼─────────────┐
+         │ Spawns      │ Connects to │
+         ▼             ▼             ▼
+┌─────────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+│Deno Process │  │   MCP    │  │   MCP    │  │   MCP    │
+│  (Sandbox)  │  │  Server  │  │  Server  │  │  Server  │
+│             │  │ (GitHub) │  │  (Slack) │  │ (Memory) │
+│• User Code  │  └──────────┘  └──────────┘  └──────────┘
+│• mcpFactory │       ▲             ▲             ▲
+│  calls      │       │             │             │
+│• Zero perms │       └─────────────┴─────────────┘
+│  by default │         RPC calls via mcpFactory
+└─────────────┘
+```
+
+### How It Works
+
+1. **LLM writes code** using the `run_deno_code` tool
+2. **MCP Conductor validates** dependencies and prepares execution environment
+3. **Code runs in sandbox** - fresh Deno subprocess with admin-controlled permissions
+4. **Optional MCP Proxy** - code can access other MCP servers via `mcpFactory` global
+5. **Results returned** - stdout, stderr, return value, and any errors
+
+---
+
+## Use Cases
+
+### 1. Secure Code Execution
+
+Execute LLM-generated code with fine-grained security controls, perfect for AI agents that need to process data or perform calculations.
+
+```typescript
+// LLM writes code, admin controls permissions
+const data = await Deno.readTextFile('./workspace/data.csv');
+const processed = data.split('\n').map(line => line.toUpperCase());
+processed.join('\n');
+```
+
+### 2. Multi-System Integration via MCP Proxy
+
+Connect to multiple MCP servers and orchestrate complex workflows across systems:
+
+```typescript
+// Query GitHub for issues
+const github = await mcpFactory.load('github');
+const issues = await github.callTool('list_issues', { 
+  repo: 'myorg/myrepo',
+  state: 'open'
+});
+
+// Save to filesystem
+const fs = await mcpFactory.load('filesystem');
+await fs.callTool('write_file', {
+  path: './workspace/issues.json',
+  content: JSON.stringify(issues, null, 2)
+});
+
+// Send summary to Slack
+const slack = await mcpFactory.load('slack');
+await slack.callTool('post_message', {
+  channel: '#updates',
+  text: `Found ${issues.length} open issues`
+});
+
+'Workflow complete!';
+```
+
+### 3. Data Processing with External APIs
+
+Fetch data, process it, and integrate with other services:
+
+```typescript
+// Fetch from external API (if --allow-net permission granted)
+const response = await fetch('https://api.example.com/data');
+const data = await response.json();
+
+// Process with TypeScript
+const summary = data.items
+  .filter(item => item.status === 'active')
+  .reduce((acc, item) => acc + item.value, 0);
+
+// Store in workspace
+await Deno.writeTextFile(
+  './workspace/summary.txt',
+  `Total: ${summary}`
+);
+
+summary;
 ```
 
 ---
 
 ## Performance
 
-### Token Efficiency
-
-| Tools | Traditional MCP | Conductor (1st msg) | Conductor (2nd+ msg) | Savings |
-| ----- | --------------- | ------------------- | -------------------- | ------- |
-| 50    | 15,000          | 1,200               | 200                  | 92-99%  |
-| 100   | 30,000          | 1,500               | 300                  | 95-99%  |
-| 200   | 60,000          | 2,000               | 400                  | 97-99%  |
-
 ### Execution Speed
 
-| Operation                | Time                      |
-| ------------------------ | ------------------------- |
-| Deno sandbox startup     | 50-100ms                  |
-| Semantic catalog search  | 15-30ms                   |
-| TypeScript execution     | 100-300ms                 |
-| Parallel tool calls (3x) | 300ms vs 900ms sequential |
+| Operation                | Time      |
+| ------------------------ | --------- |
+| Deno sandbox startup     | 50-100ms  |
+| TypeScript execution     | 100-300ms |
+| MCP proxy tool call      | 50-200ms  |
+| Parallel MCP calls (3x)  | ~200ms    |
 
-### Memory Usage
+### Resource Usage
 
-| Component             | Memory     |
-| --------------------- | ---------- |
-| Catalog (1000 tools)  | 15 MB      |
-| Per conversation      | 2 MB       |
-| Per MCP connection    | 4 MB       |
-| **Total (5 servers)** | **~35 MB** |
+| Component              | Memory   |
+| ---------------------- | -------- |
+| MCP Conductor server   | ~10 MB   |
+| Per code execution     | ~20 MB   |
+| Per MCP connection     | ~4 MB    |
+| **Total (3 MCP servers)** | **~42 MB** |
+
+---
+
+## Available Tools
+
+MCP Conductor provides the following MCP tools:
+
+### 1. `run_deno_code`
+
+Execute TypeScript/JavaScript code in a secure Deno sandbox.
+
+**Parameters:**
+- `deno_code` (required): TypeScript or JavaScript code to execute
+- `timeout` (optional): Execution timeout in milliseconds (default: 30000, max: 300000)
+- `globals` (optional): Global variables to inject into execution context
+- `dependencies` (optional): NPM or JSR dependencies to install (must be in allowlist)
+
+**Features:**
+- Full TypeScript and modern JavaScript support
+- Async/await support
+- Return value capture from last expression
+- stdout/stderr capture
+- Admin-controlled permissions
+- Auto-injected `mcpFactory` for MCP proxy access (if enabled)
+
+### 2. `list_mcp_servers` (if MCP proxy enabled)
+
+List all configured MCP servers and their status.
+
+**Returns:**
+- Array of server info including name, status, available tools/resources/prompts count
+
+### 3. `get_tool_details` (if MCP proxy enabled)
+
+Get detailed information about tools from a specific MCP server.
+
+**Parameters:**
+- `server` (required): Name of the MCP server
+- `tools` (optional): Specific tool names to get details for (returns all if not specified)
+
+**Returns:**
+- Detailed tool specifications including parameters, descriptions, and schemas
 
 ---
 
 ## Documentation
 
-- 📖 [Architecture Overview](docs/ARCHITECTURE.md) - Deep dive into design
-- 🚀 [Quick Start Guide](docs/QUICKSTART.md) - Get started in 5 minutes
-- 📚 [API Reference](docs/API.md) - Complete API documentation
+- 📄 [Environment Variables](docs/ENV_VARS.md) - Detailed configuration guide
+- 🔒 [Security Model](docs/SECURITY.md) - Security architecture and best practices
 - 💡 [Examples](examples/) - Code examples for common patterns
-- 🛠️ [Contributing](CONTRIBUTING.md) - How to contribute
-
----
-
-## Use Cases
-
-### 1. Multi-System Data Analysis
-
-Query Salesforce, cross-reference Slack discussions, create Notion summary — all in one code block
-with data processing in sandbox.
-
-### 2. Automated Workflows
-
-50+ step workflows across 10+ systems, with parallel execution and intelligent error handling.
-
-### 3. Development Assistants
-
-Agents with access to GitHub, Jira, Slack, documentation systems — discovering relevant tools
-on-demand.
-
-### 4. Enterprise Integration
-
-Connect to internal APIs, databases, and services through MCP with secure sandboxing and audit
-logging.
 
 ---
 
 ## Roadmap
 
-### Phase 1: Core (Weeks 1-3) ✅
+### ✅ Completed
 
-- [x] MCP client (stdio transport)
-- [x] Semantic catalog search
-- [x] Deno sandbox execution
-- [x] TypeScript API generation
+- [x] Secure Deno code execution with permission controls
+- [x] MCP protocol support (stdio and HTTP transports)
+- [x] Dependency allowlist management
+- [x] MCP proxy for connecting to multiple MCP servers
+- [x] Auto-injected `mcpFactory` for code execution
+- [x] Two-step dependency installation security
+- [x] Comprehensive security model
 
-### Phase 2: Intelligence (Weeks 4-6) 🚧
+### 🚧 In Progress
 
-- [ ] Conversation state management
-- [ ] Co-usage learning
-- [ ] Integration & CLI
-- [ ] Documentation
+- [ ] Enhanced error reporting and debugging
+- [ ] Performance optimizations
+- [ ] Additional MCP transport types
 
-### Phase 3: Production (Weeks 7-9) 📋
+### 📋 Future
 
-- [ ] HTTP transport
-- [ ] Redis persistence
-- [ ] Observability & metrics
-- [ ] Performance optimization
-
-### Future
-
-- [ ] Multi-language sandboxes (Python via Pyodide)
-- [ ] GraphQL API layer
-- [ ] Visual workflow builder
-- [ ] Enterprise features (SSO, RBAC)
-
----
-
-## Community
-
-- 💬 [Discord](https://discord.gg/conductor) - Chat with the community
-- 🐛 [Issues](https://github.com/conductor/conductor/issues) - Report bugs or request features
-- 🤝 [Discussions](https://github.com/conductor/conductor/discussions) - Ask questions and share
-  ideas
-- 🐦 [Twitter](https://twitter.com/conductor_mcp) - Stay updated
+- [ ] Python code execution via Pyodide
+- [ ] Enhanced logging and observability
+- [ ] Rate limiting and resource quotas
+- [ ] Multi-user workspace isolation
 
 ---
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-**Areas we need help**:
-
-- Vector database integrations (Chroma, Pinecone)
-- Additional MCP server testing
+**Areas where we need help:**
+- Additional MCP server testing and examples
 - Documentation improvements
 - Performance benchmarking
+- Security audits
 - Example workflows
 
 ---
@@ -415,11 +455,10 @@ Apache 2.0 - See [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
-- [Anthropic](https://anthropic.com) - For MCP protocol and insights on code execution
-- [Cloudflare](https://cloudflare.com) - For "code mode" research and validation
-- [Microsoft Research](https://microsoft.com/research) - For scaling analysis
+- [Anthropic](https://anthropic.com) - For creating the Model Context Protocol
 - [Deno Team](https://deno.land) - For the secure-by-default runtime
-- [MCP Community](https://modelcontextprotocol.io) - For building the ecosystem
+- [MCP Community](https://modelcontextprotocol.io) - For building the MCP ecosystem
+- [@pydantic/mcp-run-python](https://github.com/pydantic/mcp-run-python) - For security model inspiration
 
 ---
 
@@ -719,7 +758,7 @@ Validate LLM outputs before execution
 
 ### Reporting Security Issues
 
-Found a security vulnerability? Please email **security@conductor.dev** (do not file public issues).
+Found a security vulnerability? Please report it via [GitHub Security Advisories](https://github.com/niradler/mcp-conductor/security/advisories).
 
 We follow responsible disclosure and will:
 
@@ -732,24 +771,22 @@ We follow responsible disclosure and will:
 ## FAQ
 
 **Q: Why TypeScript only, not Python?**\
-A: LLMs have millions of lines of real TypeScript in training data. Python support via Pyodide is
-planned for Phase 4.
+A: TypeScript provides excellent safety and tooling. Python support via Pyodide is planned for the future.
 
-**Q: Can I use this with GPT-4?**\
-A: Yes! Works with any LLM that can write TypeScript and follow instructions.
+**Q: Can I use this with GPT-4 or other LLMs?**\
+A: Yes! Works with any LLM that supports MCP and can write TypeScript/JavaScript.
 
-**Q: How is this different from direct MCP integration?**\
-A: Conductor adds intelligent catalog management, conversation state, and code execution — solving
-scaling problems beyond 50 tools.
+**Q: How does MCP Proxy differ from direct MCP integration?**\
+A: MCP Proxy lets your executed code call tools from multiple MCP servers within a single execution. Instead of the LLM making separate tool calls through the MCP protocol, it writes code that orchestrates multiple MCP servers together using the `mcpFactory` object.
 
 **Q: What about security?**\
-A: MCP Conductor uses Deno's permission model + V8 isolation for strong sandboxing. All code runs
-with zero permissions by default, and the `--no-prompt` flag prevents permission escalation.
-Dependencies are installed in a two-step process (write → read-only) following industry best
-practices. See the [Security](#security) section above for comprehensive details.
+A: MCP Conductor uses Deno's permission model + V8 isolation for strong sandboxing. All code runs with zero permissions by default, and the `--no-prompt` flag prevents permission escalation. Dependencies are installed in a two-step process (write → read-only) following industry best practices. See the [Security](#security) section above for comprehensive details.
 
-**Q: Can I use my existing MCP servers?**\
-A: Yes! Zero changes needed. Conductor works with any standard MCP server.
+**Q: Can I use my existing MCP servers with the proxy?**\
+A: Yes! Any standard MCP server that supports stdio or SSE transport can be configured in the `mcp-config.json` file.
+
+**Q: How do I debug code execution failures?**\
+A: Check the stderr output returned by `run_deno_code`. Common issues include missing permissions, dependency not in allowlist, or timeout exceeded.
 
 ---
 
@@ -757,5 +794,8 @@ A: Yes! Zero changes needed. Conductor works with any standard MCP server.
 
 **Built with ❤️ for the AI agent community**
 
-[⭐ Star us on GitHub](https://github.com/conductor/conductor) |
-[📖 Read the docs](https://conductor.dev) | [💬 Join Discord](https://discord.gg/conductor)
+[⭐ Star on GitHub](https://github.com/niradler/mcp-conductor) |
+[📖 Documentation](docs/) |
+[🐛 Report Issues](https://github.com/niradler/mcp-conductor/issues)
+
+
