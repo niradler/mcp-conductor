@@ -34,6 +34,14 @@ globalThis.mcpFactory = {
   _rpcUrl: 'http://localhost:${rpcPort}/mcp-rpc',
   _authToken: '${authToken}',
   
+  async listServers() {
+    const result = await mcpRpcCall(this._rpcUrl, this._authToken, {
+      method: 'listServers',
+      args: []
+    });
+    return result;
+  },
+  
   async load(serverName) {
     const factory = this;
     

@@ -72,8 +72,8 @@ export class MCPRPCServer {
       // Validate and parse request
       const request = JSON.parse(body) as MCPRPCRequest
 
-      // Validate server name (prevent path traversal)
-      if (!this.isValidServerName(request.server)) {
+      // Validate server name (prevent path traversal) - skip for listServers
+      if (request.method !== 'listServers' && !this.isValidServerName(request.server)) {
         throw new Error('Invalid server name')
       }
 
@@ -82,6 +82,10 @@ export class MCPRPCServer {
 
       try {
         switch (request.method) {
+          case 'listServers':
+            result = this.manager.listServers()
+            break
+
           case 'callTool':
             validateRPCArgs(request.args, 2, 'callTool')
             result = await this.manager.callTool(

@@ -18,7 +18,7 @@ export function createMCPProxyTools(manager: MCPManager) {
       },
     },
 
-    get_tool_details: {
+    get_tools: {
       tool: {
         title: 'Get Tool Details',
         description:

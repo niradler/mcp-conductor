@@ -164,7 +164,14 @@ export interface MCPToolDetails {
  */
 export interface MCPRPCRequest {
   server: string
-  method: 'callTool' | 'listTools' | 'listResources' | 'listPrompts' | 'readResource' | 'getPrompt'
+  method:
+    | 'listServers'
+    | 'callTool'
+    | 'listTools'
+    | 'listResources'
+    | 'listPrompts'
+    | 'readResource'
+    | 'getPrompt'
   args: unknown[]
 }
 

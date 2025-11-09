@@ -160,6 +160,44 @@ Security:
 - Each execution is in a fresh environment
 - Dependency allowlist enforced
 
+**MCP Factory Client** (Access Other MCP Servers):
+You can call other MCP servers from within your code using the \`mcpFactory\` global (if available):
+
+\`\`\`typescript
+// Check if mcpFactory is available
+if (typeof mcpFactory !== 'undefined') {
+  // List available servers
+  const servers = await mcpFactory.listServers() // for debugging, try to avoid this call if possible
+  
+  if (servers.length > 0) {
+    // Load a specific server
+    const github = await mcpFactory.load('github')
+    
+    // Call tools from the server
+    if (github) {
+      const repos = await github.callTool('list_repos', { username: 'octocat' })
+      console.log('GitHub repos:', repos.length) // return only the data you need, not the entire response, reduce token usage as much as possible
+    } else {
+      console.error('GitHub server not available')
+    }
+    
+    // Chain multiple servers
+    const fs = await mcpFactory.load('filesystem')
+    if (fs) {
+      await fs.callTool('write_file', { path: '/path/to/file.json', content: JSON.stringify(repos) })
+    } else {
+      console.error('Filesystem server not available')
+    }
+  }
+} else {
+  console.log('No MCP servers configured')
+}
+\`\`\`
+
+Note: The \`mcpFactory\` global is only available when MCP servers are configured in the server's mcp.json file.
+
+**Alternative Discovery Tools**: You can also use the \`list_mcp_servers\` and \`get_tools\` tools (outside of code execution) to discover available MCP servers and get detailed tool information before writing code.
+
 The last expression in your code will be returned as the result.
 `
 
@@ -204,10 +242,8 @@ The last expression in your code will be returned as the result.
             content: [{
               type: 'text',
               text:
-                `<status>error</status>\n<error>\n<type>dependency-not-allowed</type>\n<message>The following dependencies are not allowed:\n\n${
-                  validation.errors.join('\n')
-                }\n\nAllowed dependencies: ${
-                  isRestrictive ? allowedDependencies.join(', ') : 'all'
+                `<status>error</status>\n<error>\n<type>dependency-not-allowed</type>\n<message>The following dependencies are not allowed:\n\n${validation.errors.join('\n')
+                }\n\nAllowed dependencies: ${isRestrictive ? allowedDependencies.join(', ') : 'all'
                 }</message>\n</error>`,
             }],
           }
@@ -281,14 +317,14 @@ The last expression in your code will be returned as the result.
     )
 
     server.registerTool(
-      'get_tool_details',
+      'get_tools',
       {
-        title: proxyTools.get_tool_details.tool.title,
-        description: proxyTools.get_tool_details.tool.description,
-        inputSchema: proxyTools.get_tool_details.tool.inputSchema,
+        title: proxyTools.get_tools.tool.title,
+        description: proxyTools.get_tools.tool.description,
+        inputSchema: proxyTools.get_tools.tool.inputSchema,
       },
       async ({ server: serverName, tools }: { server: string; tools?: string[] }) => {
-        const result = await proxyTools.get_tool_details.handler({ server: serverName, tools })
+        const result = await proxyTools.get_tools.handler({ server: serverName, tools })
         return {
           content: [{
             type: 'text',
