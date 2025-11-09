@@ -21,6 +21,10 @@ import type { ServerConfig } from '../types/types.ts'
 import { DEFAULT_ALLOWED_DEPENDENCIES, validateDependencies } from '../executor/allowlist.ts'
 import { ensureWorkspaceDir } from '../executor/workspace.ts'
 import { loadConfigFromEnv } from './config.ts'
+import { MCPManager } from '../mcp-proxy/manager.ts'
+import { MCPRPCServer } from '../mcp-proxy/rpc-server.ts'
+import { generateMcpFactoryCode } from '../mcp-proxy/factory.ts'
+import { createMCPProxyTools } from '../mcp-proxy/tools.ts'
 
 const VERSION = '0.1.0'
 
@@ -38,8 +42,28 @@ export async function createServer(config: ServerConfig = {}): Promise<McpServer
   // Get default run args (used when no permissions specified)
   const defaultRunArgs = finalConfig.defaultRunArgs ?? []
 
+  // Initialize MCP proxy manager
+  const mcpManager = new MCPManager()
+  await mcpManager.initialize()
+
+  // Start RPC server for MCP proxy
+  let mcpRPCServer: MCPRPCServer | null = null
+  let mcpFactoryCode: string | null = null
+
+  if (mcpManager) {
+    mcpRPCServer = new MCPRPCServer(mcpManager)
+    const rpcPort = await mcpRPCServer.start()
+    const authToken = mcpRPCServer.getAuthToken()
+    mcpFactoryCode = generateMcpFactoryCode(rpcPort, authToken)
+  }
+
   // Create executor with default run args
   const runCode = new RunCode(defaultRunArgs)
+
+  // Set MCP factory code if available
+  if (mcpFactoryCode) {
+    runCode.setMcpFactoryCode(mcpFactoryCode)
+  }
 
   const returnMode = finalConfig.returnMode ?? 'xml'
 
@@ -206,6 +230,59 @@ The last expression in your code will be returned as the result.
       }
     },
   )
+
+  // Register MCP proxy tools if manager is available
+  if (mcpManager) {
+    const proxyTools = createMCPProxyTools(mcpManager)
+
+    server.registerTool(
+      'list_mcp_servers',
+      {
+        title: proxyTools.list_mcp_servers.tool.title,
+        description: proxyTools.list_mcp_servers.tool.description,
+        inputSchema: proxyTools.list_mcp_servers.tool.inputSchema
+      },
+      async () => {
+        const result = await proxyTools.list_mcp_servers.handler()
+        return {
+          content: [{
+            type: 'text',
+            text: returnMode === 'xml'
+              ? `<servers>${JSON.stringify(result.servers, null, 2)}</servers>`
+              : JSON.stringify(result)
+          }]
+        }
+      }
+    )
+
+    server.registerTool(
+      'get_tool_details',
+      {
+        title: proxyTools.get_tool_details.tool.title,
+        description: proxyTools.get_tool_details.tool.description,
+        inputSchema: proxyTools.get_tool_details.tool.inputSchema
+      },
+      async ({ server: serverName, tools }: { server: string; tools?: string[] }) => {
+        const result = await proxyTools.get_tool_details.handler({ server: serverName, tools })
+        return {
+          content: [{
+            type: 'text',
+            text: returnMode === 'xml'
+              ? `<tools>${JSON.stringify(result.tools, null, 2)}</tools>`
+              : JSON.stringify(result)
+          }]
+        }
+      }
+    )
+  }
+
+  // Store references for cleanup
+  const serverWithCleanup = server as McpServer & {
+    _mcpManager?: MCPManager
+    _mcpRPCServer?: MCPRPCServer
+  }
+  serverWithCleanup._mcpManager = mcpManager
+  serverWithCleanup._mcpRPCServer = mcpRPCServer ?? undefined
 
   return server
 }

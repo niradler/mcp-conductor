@@ -106,3 +106,63 @@ export interface ServerConfig {
  * CLI mode
  */
 export type ServerMode = 'stdio' | 'streamable-http' | 'example'
+
+/**
+ * MCP Proxy Configuration
+ */
+export interface MCPServerConfig {
+  mcpServers: {
+    [name: string]: {
+      command?: string
+      args?: string[]
+      env?: Record<string, string>
+      url?: string
+      transport?: 'sse'
+      disabled?: boolean
+    }
+  }
+}
+
+/**
+ * MCP Server Information
+ */
+export interface MCPServerInfo {
+  name: string
+  description: string
+  tools: number
+  resources: number
+  prompts: number
+  sample_tools: string[]
+  error: string | null
+}
+
+/**
+ * MCP Tool Details
+ */
+export interface MCPToolDetails {
+  name: string
+  description: string
+  inputSchema: {
+    type: string
+    properties?: Record<string, unknown>
+    required?: string[]
+    [key: string]: unknown
+  }
+}
+
+/**
+ * MCP RPC Request
+ */
+export interface MCPRPCRequest {
+  server: string
+  method: 'callTool' | 'listTools' | 'listResources' | 'listPrompts' | 'readResource' | 'getPrompt'
+  args: unknown[]
+}
+
+/**
+ * MCP RPC Response
+ */
+export interface MCPRPCResponse {
+  result?: unknown
+  error?: string
+}
