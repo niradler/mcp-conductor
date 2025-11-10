@@ -21,7 +21,7 @@ export class MCPRPCServer {
     return this.authToken
   }
 
-  async start(): Promise<number> {
+  start(): Promise<number> {
     return new Promise((resolve, reject) => {
       this.server = http.createServer(async (req, res) => {
         if (req.url === '/mcp-rpc' && req.method === 'POST') {
@@ -182,7 +182,7 @@ export class MCPRPCServer {
     return this.port
   }
 
-  async stop(): Promise<void> {
+  stop(): Promise<void> {
     if (this.server) {
       return new Promise((resolve, reject) => {
         this.server!.close((err) => {
@@ -195,5 +195,6 @@ export class MCPRPCServer {
         })
       })
     }
+    return Promise.resolve()
   }
 }

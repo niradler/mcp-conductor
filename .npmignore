@@ -1,0 +1,15 @@
+tests/
+coverage/
+.cursor/
+examples/
+.git/
+.github/
+.vscode/
+deno.lock
+scripts/
+*.test.ts
+*.tsbuildinfo
+node_modules/
+npm/
+build/
+

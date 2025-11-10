@@ -87,12 +87,11 @@ await test('Timeout enforcement', async () => {
   return result.status === 'error' && result.errorType === 'timeout'
 })
 
-// Test 7: Global variables
-await test('Global variable injection', async () => {
+// Test 7: Variable assignment
+await test('Variable assignment', async () => {
   const result = await runCode.run({
-    code: 'x + y',
+    code: 'const x = 10; const y = 20; x + y',
     permissions: {},
-    globals: { x: 10, y: 20 },
   })
   return result.status === 'success' && result.returnValue === '30'
 })

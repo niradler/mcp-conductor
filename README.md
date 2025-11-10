@@ -34,12 +34,14 @@ environment variables.
 ### 1. Installation
 
 **Option A: Direct from JSR (Recommended)**
+
 ```bash
 # No installation needed! Use directly in MCP configs
 # See configuration examples below
 ```
 
 **Option B: Development (Clone Repository)**
+
 ```bash
 git clone https://github.com/niradler/mcp-conductor
 cd mcp-conductor

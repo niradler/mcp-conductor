@@ -24,7 +24,9 @@ const result1 = await runCode.run({
 })
 
 console.log('Status:', result1.status)
-console.log('Return Value:', result1.returnValue)
+if (result1.status === 'success') {
+  console.log('Return Value:', result1.returnValue)
+}
 console.log('Output:', result1.output.join('\n'))
 console.log('Execution Time:', `${result1.executionTime.toFixed(2)}ms`)
 console.log()
@@ -80,23 +82,23 @@ if (result3.status === 'success') {
 }
 console.log()
 
-// Example 4: Using global variables
-console.log('4. Global Variables:')
+// Example 4: String manipulation
+console.log('4. String Manipulation:')
 const result4 = await runCode.run({
   code: `
+    const name = 'Alice';
+    const age = 25;
     console.log(\`Hello, \${name}!\`)
     console.log(\`You are \${age} years old.\`)
     
     \`\${name} will be \${age + 10} years old in 10 years\`
   `,
   permissions: {},
-  globals: {
-    name: 'Alice',
-    age: 25,
-  },
 })
 
-console.log('Result:', result4.returnValue)
+if (result4.status === 'success') {
+  console.log('Result:', result4.returnValue)
+}
 console.log()
 
 // Example 5: Error handling

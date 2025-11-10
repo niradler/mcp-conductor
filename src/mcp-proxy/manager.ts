@@ -243,14 +243,14 @@ export class MCPManager {
     })
   }
 
-  async listTools(serverName: string): Promise<Tool[]> {
-    return this.validateEntry(serverName).tools
+  listTools(serverName: string): Promise<Tool[]> {
+    return Promise.resolve(this.validateEntry(serverName).tools)
   }
 
-  async listResources(
+  listResources(
     serverName: string,
   ): Promise<Array<{ uri: string; name: string; description?: string }>> {
-    return this.validateEntry(serverName).resources
+    return Promise.resolve(this.validateEntry(serverName).resources)
   }
 
   async readResource(serverName: string, uri: string): Promise<unknown> {
@@ -258,8 +258,8 @@ export class MCPManager {
     return await client.readResource({ uri })
   }
 
-  async listPrompts(serverName: string): Promise<Array<{ name: string; description?: string }>> {
-    return this.validateEntry(serverName).prompts
+  listPrompts(serverName: string): Promise<Array<{ name: string; description?: string }>> {
+    return Promise.resolve(this.validateEntry(serverName).prompts)
   }
 
   async getPrompt(serverName: string, promptName: string, args: unknown): Promise<unknown> {

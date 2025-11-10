@@ -62,7 +62,7 @@ async function runMCPExample() {
     })
 
     console.log('Tool result:')
-    console.log(result.content[0])
+    console.log((result.content as Array<{ type: string; text: string }>)[0])
     console.log()
 
     // Example with network permission
@@ -82,7 +82,7 @@ async function runMCPExample() {
     })
 
     console.log('Network request result:')
-    console.log(result2.content[0])
+    console.log((result2.content as Array<{ type: string; text: string }>)[0])
     console.log()
 
     console.log('=== MCP Client Example Complete ===')
