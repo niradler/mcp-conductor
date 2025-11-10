@@ -1,6 +1,24 @@
 {
   "name": "@mcp/conductor",
   "version": "0.2.0",
+  "description": "Secure Deno code execution for AI agents via Model Context Protocol. Execute TypeScript/JavaScript in isolated, permission-controlled sandboxes.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/niradler/mcp-conductor"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "deno",
+    "security",
+    "sandbox",
+    "code-execution",
+    "ai",
+    "llm",
+    "typescript",
+    "javascript"
+  ],
   "exports": {
     ".": "./src/cli/cli.ts",
     "./server": "./src/server/main.ts"
@@ -23,11 +41,16 @@
   },
   "compilerOptions": {
     "strict": true,
-    "lib": ["deno.window", "deno.ns"]
+    "lib": [
+      "deno.window",
+      "deno.ns"
+    ]
   },
   "lint": {
     "rules": {
-      "tags": ["recommended"]
+      "tags": [
+        "recommended"
+      ]
     }
   },
   "fmt": {
