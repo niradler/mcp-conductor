@@ -3,61 +3,94 @@
  *
  * Supported environment variables:
  * - MCP_CONDUCTOR_WORKSPACE: Workspace directory path
- * - MCP_CONDUCTOR_ALLOWED_PACKAGES: Comma-separated list of allowed packages
  * - MCP_CONDUCTOR_RUN_ARGS: Comma-separated Deno permission flags
  * - MCP_CONDUCTOR_DEFAULT_TIMEOUT: Default execution timeout in ms
  * - MCP_CONDUCTOR_MAX_TIMEOUT: Maximum execution timeout in ms
+ * - MCP_CONDUCTOR_MAX_RETURN_SIZE: Max return value size in bytes (default 256KB)
+ */
+
+/**
+ * SECURITY MODEL
+ *
+ * Default Security Posture (based on Deno security model):
+ * - Zero permissions (--allow-none) - Most secure by default
+ * - --no-prompt: Prevents interactive permission escalation
+ * - --cached-only: Only use cached dependencies (no network fetching)
+ * - --no-remote: Block remote module fetching
+ *
+ * Two-Process Isolation:
+ * Server process (trusted) runs with full permissions to manage workspace
+ * User code subprocess (untrusted) runs with zero permissions by default
+ * Subprocess crashes or OOM do not affect server
+ * Each execution runs in fresh subprocess with clean environment
+ *
+ * Code Execution is Unrestricted (Deno Design):
+ * Per https://docs.deno.com/runtime/fundamentals/security/
+ * "No limits on the execution of code at the same privilege level"
+ * - eval() and Function() - Allowed by design
+ * - data: URLs - Allowed by design
+ * - dynamic imports - Allowed by design
+ * - WebAssembly - Allowed by design
+ * - Workers - Allowed by design
+ *
+ * The Security Boundary is the PERMISSION SANDBOX:
+ * All code executes at zero permissions by default - cannot access:
+ * - File system (blocked by missing --allow-read/write)
+ * - Network (blocked by missing --allow-net)
+ * - Environment variables (blocked by missing --allow-env)
+ * - Subprocesses (blocked by missing --allow-run)
+ *
+ * This aligns with Deno's security model where the permission system
+ * is the defense, not restricting code execution mechanisms.
  */
 
 import type { ServerConfig } from '../types/types.ts'
-import { DEFAULT_ALLOWED_DEPENDENCIES } from '../executor/allowlist.ts'
 
-/**
- * Parse allowed packages from environment variable
- * Format: "npm:axios@^1,npm:zod@^3,jsr:@std/path"
- */
-function parseAllowedPackages(value?: string): string[] | true {
-  if (!value || value.trim() === '') {
-    return DEFAULT_ALLOWED_DEPENDENCIES
-  }
+const DEFAULT_WORKSPACE = (Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '.') +
+  (Deno.build.os === 'windows' ? '\\' : '/') +
+  '.mcp-conductor' +
+  (Deno.build.os === 'windows' ? '\\' : '/') +
+  'workspace'
 
-  // Special value to allow all
-  if (value.toLowerCase() === 'all' || value === '*') {
-    return true
-  }
-
-  // Parse comma-separated list
-  return value.split(',').map((pkg) => pkg.trim()).filter((pkg) => pkg.length > 0)
+export const SECURE_DEFAULTS = {
+  workspace: DEFAULT_WORKSPACE,
+  runArgs: ['--cached-only', '--no-remote'],
+  defaultTimeout: 30000,
+  maxTimeout: 300000,
+  maxReturnSize: 262144,
 }
 
-/**
- * Parse Deno run arguments from environment variable
- * Format: "no-prompt,allow-read,allow-write=/tmp"
- *
- * These are DEFAULT flags used when no permissions are specified in tool call
- * User-specified permissions will OVERRIDE these defaults
- */
-function parseRunArgs(value?: string): string[] {
+function parseRunArgs(value?: string, workspaceDir?: string): string[] {
+  const workspace = workspaceDir || SECURE_DEFAULTS.workspace
+
   if (!value || value.trim() === '') {
-    return []
+    return [
+      ...SECURE_DEFAULTS.runArgs,
+      `--allow-read=${workspace}`,
+      `--allow-write=${workspace}`,
+    ]
   }
 
-  return value
+  const userArgs = value
     .split(',')
     .map((arg) => {
       arg = arg.trim()
-      // Add -- prefix if not present
       if (!arg.startsWith('-')) {
         return `--${arg}`
       }
       return arg
     })
-    .filter((arg) => arg.length > 2) // Filter out just "--"
+    .filter((arg) => arg.length > 2)
+
+  const hasNetPermission = userArgs.some((arg) => arg.startsWith('--allow-net'))
+
+  if (hasNetPermission) {
+    return userArgs
+  }
+
+  return [...userArgs, ...SECURE_DEFAULTS.runArgs]
 }
 
-/**
- * Parse timeout value from environment variable
- */
 function parseTimeout(value?: string, defaultValue?: number): number | undefined {
   if (!value || value.trim() === '') {
     return defaultValue
@@ -72,57 +105,36 @@ function parseTimeout(value?: string, defaultValue?: number): number | undefined
   return parsed
 }
 
-/**
- * Load server configuration from environment variables
- */
 export function loadConfigFromEnv(): ServerConfig {
-  const workspaceDir = Deno.env.get('MCP_CONDUCTOR_WORKSPACE')
-  const allowedPackages = parseAllowedPackages(Deno.env.get('MCP_CONDUCTOR_ALLOWED_PACKAGES'))
-  const runArgs = parseRunArgs(Deno.env.get('MCP_CONDUCTOR_RUN_ARGS'))
-  const defaultTimeout = parseTimeout(Deno.env.get('MCP_CONDUCTOR_DEFAULT_TIMEOUT'))
-  const maxTimeout = parseTimeout(Deno.env.get('MCP_CONDUCTOR_MAX_TIMEOUT'))
+  const workspaceDir = Deno.env.get('MCP_CONDUCTOR_WORKSPACE') || SECURE_DEFAULTS.workspace
+  const runArgs = parseRunArgs(Deno.env.get('MCP_CONDUCTOR_RUN_ARGS'), workspaceDir)
+  const defaultTimeout = parseTimeout(
+    Deno.env.get('MCP_CONDUCTOR_DEFAULT_TIMEOUT'),
+    SECURE_DEFAULTS.defaultTimeout,
+  )
+  const maxTimeout = parseTimeout(
+    Deno.env.get('MCP_CONDUCTOR_MAX_TIMEOUT'),
+    SECURE_DEFAULTS.maxTimeout,
+  )
+  const maxReturnSize = parseTimeout(
+    Deno.env.get('MCP_CONDUCTOR_MAX_RETURN_SIZE'),
+    SECURE_DEFAULTS.maxReturnSize,
+  )
 
-  // Log configuration
   console.error('=== MCP Conductor Configuration ===')
-
-  if (workspaceDir) {
-    console.error(`Workspace: ${workspaceDir}`)
-  } else {
-    console.error('Workspace: (default)')
-  }
-
-  if (Array.isArray(allowedPackages)) {
-    console.error(`Allowed packages: ${allowedPackages.length} packages`)
-    if (allowedPackages.length <= 10) {
-      allowedPackages.forEach((pkg) => console.error(`  - ${pkg}`))
-    } else {
-      allowedPackages.slice(0, 5).forEach((pkg) => console.error(`  - ${pkg}`))
-      console.error(`  ... and ${allowedPackages.length - 5} more`)
-    }
-  } else {
-    console.error('⚠️  Allowed packages: ALL (unrestricted)')
-  }
-
-  if (runArgs.length > 0) {
-    console.error(`Additional run args: ${runArgs.join(' ')}`)
-  }
-
-  if (defaultTimeout) {
-    console.error(`Default timeout: ${defaultTimeout}ms`)
-  }
-
-  if (maxTimeout) {
-    console.error(`Max timeout: ${maxTimeout}ms`)
-  }
-
+  console.error(`Workspace: ${workspaceDir}`)
+  console.error(`Run args: ${runArgs.join(' ')}`)
+  console.error(`Default timeout: ${defaultTimeout}ms`)
+  console.error(`Max timeout: ${maxTimeout}ms`)
+  console.error(`Max return size: ${maxReturnSize} bytes`)
   console.error('===================================')
 
   return {
     workspaceDir,
-    allowedDependencies: allowedPackages,
     defaultRunArgs: runArgs,
     defaultTimeout,
     maxTimeout,
+    maxReturnSize,
   }
 }
 
@@ -130,36 +142,21 @@ export function loadConfigFromEnv(): ServerConfig {
  * Example configurations for documentation
  */
 export const EXAMPLE_CONFIGS = {
-  // Minimal - only allow specific packages
-  minimal: {
-    MCP_CONDUCTOR_ALLOWED_PACKAGES: 'npm:axios@^1,jsr:@std/path',
-    MCP_CONDUCTOR_RUN_ARGS: 'no-prompt',
-  },
-
-  // Development - more permissive
-  development: {
-    MCP_CONDUCTOR_WORKSPACE: '/tmp/mcp-sessions',
-    MCP_CONDUCTOR_ALLOWED_PACKAGES: 'all',
-    MCP_CONDUCTOR_RUN_ARGS: 'no-prompt,allow-read=/tmp/mcp-sessions,allow-write=/tmp/mcp-sessions',
-  },
-
-  // Production - strict security
-  production: {
-    MCP_CONDUCTOR_WORKSPACE: '${HOME}/.mcp-conductor/sessions',
-    MCP_CONDUCTOR_ALLOWED_PACKAGES: 'npm:axios@^1,npm:zod@^3,jsr:@std/path,jsr:@std/fs',
-    MCP_CONDUCTOR_RUN_ARGS: 'no-prompt',
-    MCP_CONDUCTOR_DEFAULT_TIMEOUT: '10000',
-    MCP_CONDUCTOR_MAX_TIMEOUT: '30000',
-  },
-
-  // AI Agent - balanced for LLM workflows
-  agent: {
-    MCP_CONDUCTOR_WORKSPACE: '${HOME}/.mcp-conductor/sessions',
-    MCP_CONDUCTOR_ALLOWED_PACKAGES:
-      'npm:axios@^1,npm:zod@^3,npm:lodash@^4,npm:date-fns@^3,jsr:@std/path,jsr:@std/fs,jsr:@std/collections,jsr:@std/async',
+  secure: {
+    MCP_CONDUCTOR_WORKSPACE: '${HOME}/.mcp-conductor/workspace',
     MCP_CONDUCTOR_RUN_ARGS:
-      'no-prompt,allow-read=${HOME}/.mcp-conductor/sessions,allow-write=${HOME}/.mcp-conductor/sessions',
+      'allow-read=${HOME}/.mcp-conductor/workspace,allow-write=${HOME}/.mcp-conductor/workspace',
+  },
+
+  development: {
+    MCP_CONDUCTOR_WORKSPACE: '/tmp/mcp-workspace',
+    MCP_CONDUCTOR_RUN_ARGS:
+      'allow-read=/tmp/mcp-workspace,allow-write=/tmp/mcp-workspace,allow-net',
     MCP_CONDUCTOR_DEFAULT_TIMEOUT: '30000',
-    MCP_CONDUCTOR_MAX_TIMEOUT: '60000',
+  },
+
+  zeroPermissions: {
+    MCP_CONDUCTOR_WORKSPACE: '${HOME}/.mcp-conductor/workspace',
+    MCP_CONDUCTOR_RUN_ARGS: '',
   },
 }

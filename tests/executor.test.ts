@@ -126,20 +126,6 @@ Deno.test('RunCode - grant network permission', async () => {
   }
 })
 
-Deno.test('RunCode - inject global variables', async () => {
-  const runCode = new RunCode()
-  const result = await runCode.run({
-    code: 'x + y',
-    permissions: {},
-    globals: { x: 10, y: 20 },
-  })
-
-  assertEquals(result.status, 'success')
-  if (result.status === 'success') {
-    assertEquals(result.returnValue, '30')
-  }
-})
-
 Deno.test('RunCode - handle complex return values', async () => {
   const runCode = new RunCode()
   const result = await runCode.run({
@@ -156,7 +142,7 @@ Deno.test('RunCode - handle complex return values', async () => {
   }
 })
 
-Deno.test('RunCode - install and use dependencies', async () => {
+Deno.test('RunCode - use npm packages with network', async () => {
   const runCode = new RunCode()
   const result = await runCode.run({
     code: `
@@ -167,8 +153,7 @@ console.log('Joined path:', path)
 
 path
 `,
-    permissions: {},
-    dependencies: ['jsr:@std/path'],
+    permissions: { net: true },
     timeout: 60000,
   })
 

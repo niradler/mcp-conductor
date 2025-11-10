@@ -16,13 +16,17 @@ import { PermissionBuilder } from './permissions.ts'
  * Manages execution of Deno code in sandboxed subprocesses
  */
 export class RunCode {
-  private readonly defaultTimeout: number = 30000 // 30 seconds
-  private readonly maxTimeout: number = 300000 // 5 minutes
+  private readonly defaultTimeout: number = 30000
+  private readonly maxTimeout: number = 300000
+  private readonly maxReturnSize: number = 262144
   private readonly defaultRunArgs: string[] = []
+  private readonly workspaceDir: string
   private mcpFactoryCode: string | null = null
 
-  constructor(defaultRunArgs?: string[]) {
+  constructor(defaultRunArgs?: string[], workspaceDir?: string, maxReturnSize?: number) {
     this.defaultRunArgs = defaultRunArgs ?? []
+    this.workspaceDir = workspaceDir ?? Deno.cwd()
+    this.maxReturnSize = maxReturnSize ?? 262144
   }
 
   setMcpFactoryCode(code: string | null): void {
@@ -48,86 +52,31 @@ export class RunCode {
 
     try {
       let runArgs: string[]
-
-      // Always include --no-prompt for safety
       const noPromptFlag = '--no-prompt'
 
-      // If user specified permissions, use those (override defaults)
       if (options.permissions && Object.keys(options.permissions).length > 0) {
-        // Validate permissions
         PermissionBuilder.validate(options.permissions)
-
-        // Build permission flags from user request
         const userPermissions = new PermissionBuilder(options.permissions).build()
-
-        // Combine: always include --no-prompt + user permissions
         runArgs = [noPromptFlag, ...userPermissions]
-
         log?.('debug', `Using user-specified permissions: ${runArgs.join(' ')}`)
       } else {
-        // No user permissions - use defaults from env vars
         const defaultArgs = this.defaultRunArgs.filter((arg) => arg !== noPromptFlag)
         runArgs = [noPromptFlag, ...defaultArgs]
-
         log?.('debug', `Using default permissions: ${runArgs.join(' ')}`)
       }
 
       log?.('debug', `Executing code with args: ${runArgs.join(' ')}`)
 
-      // TWO-STEP DEPENDENCY INSTALLATION (Security Model)
-      let importMapFile: string | undefined
-      let depsDir: string | undefined
-
-      if (options.dependencies && options.dependencies.length > 0) {
-        log?.('info', `Installing dependencies: ${options.dependencies.join(', ')}`)
-
-        // Step 1: Install dependencies with write permissions
-        const installResult = await this.installDependencies(
-          options.dependencies,
-          timeout,
-          log,
-        )
-
-        if (!installResult.success) {
-          const executionTime = performance.now() - startTime
-          return {
-            status: 'error',
-            output: installResult.output,
-            error: installResult.error,
-            errorType: 'runtime',
-            executionTime,
-          } as RunError
-        }
-
-        importMapFile = installResult.importMapFile
-        depsDir = installResult.depsDir
-
-        log?.('info', 'Dependencies installed successfully')
-      }
-
-      // Create a wrapper script that:
-      // 1. Captures the last expression value
-      // 2. Handles async code
-      // 3. Provides globals
-      // 4. Imports dependencies (if any)
-      const wrappedCode = this.wrapCode(
-        options.code,
-        options.globals,
-        options.dependencies,
-      )
-
-      // Write code to a temporary file
+      const wrappedCode = this.wrapCode(options.code)
       const tempFile = await this.writeTempFile(wrappedCode)
 
       try {
-        // Step 2: Execute in subprocess with READ-ONLY access to deps
         const result = await this.executeInSubprocess(
           tempFile,
           runArgs,
           timeout,
-          options.cwd,
+          options.cwd ?? this.workspaceDir,
           log,
-          importMapFile,
         )
 
         const executionTime = performance.now() - startTime
@@ -149,18 +98,7 @@ export class RunCode {
           } as RunError
         }
       } finally {
-        // Clean up temp files
         await this.deleteTempFile(tempFile)
-        if (importMapFile) {
-          await this.deleteTempFile(importMapFile)
-        }
-        if (depsDir) {
-          try {
-            await Deno.remove(depsDir, { recursive: true })
-          } catch {
-            // Ignore cleanup errors
-          }
-        }
       }
     } catch (error) {
       const executionTime = performance.now() - startTime
@@ -179,19 +117,9 @@ export class RunCode {
   /**
    * Wrap user code to capture return value and handle async
    */
-  private wrapCode(
-    code: string,
-    globals?: Record<string, unknown>,
-    _dependencies?: string[],
-  ): string {
+  private wrapCode(code: string): string {
     const mcpFactoryInjection = this.mcpFactoryCode
       ? `try {\n${this.mcpFactoryCode}\n} catch (e) {\n  console.error('Failed to initialize MCP factory:', e);\n}\n\n`
-      : ''
-
-    const globalsCode = globals
-      ? Object.entries(globals)
-        .map(([key, value]) => `const ${key} = ${JSON.stringify(value)};`)
-        .join('\n')
       : ''
 
     const trimmedCode = code.trim()
@@ -208,19 +136,15 @@ export class RunCode {
 
       // Check if last line is a return statement
       if (lastLine.startsWith('return ')) {
-        // Remove return and treat as expression
-        const valueExpr = lastLine.substring(7).trim() // Remove 'return '
+        const valueExpr = lastLine.substring(7).trim()
         const precedingLines = lines.slice(0, -1).join('\n')
         return `
 // MCP Run Deno - Module Execution
-${mcpFactoryInjection}${globalsCode}
-
+${mcpFactoryInjection}
 ${precedingLines}
 
-// Capture return value
 const __mcpRunDenoResult = ${valueExpr}
 
-// Serialize and output result
 if (__mcpRunDenoResult !== undefined) {
   try {
     console.log('__MCP_RETURN_VALUE__:' + JSON.stringify(__mcpRunDenoResult));
@@ -252,14 +176,11 @@ if (__mcpRunDenoResult !== undefined) {
         const precedingLines = lines.slice(0, -1).join('\n')
         return `
 // MCP Run Deno - Module Execution
-${mcpFactoryInjection}${globalsCode}
-
+${mcpFactoryInjection}
 ${precedingLines}
 
-// Capture last expression
 const __mcpRunDenoResult = ${lastLine};
 
-// Serialize and output result
 if (__mcpRunDenoResult !== undefined) {
   try {
     console.log('__MCP_RETURN_VALUE__:' + JSON.stringify(__mcpRunDenoResult));
@@ -269,11 +190,9 @@ if (__mcpRunDenoResult !== undefined) {
 }
 `
       } else {
-        // No clear return value, just run the code
         return `
 // MCP Run Deno - Module Execution
-${mcpFactoryInjection}${globalsCode}
-
+${mcpFactoryInjection}
 ${trimmedCode}
 `
       }
@@ -317,14 +236,11 @@ ${trimmedCode}
 
     return `
 // MCP Run Deno - Execution Wrapper
-${mcpFactoryInjection}${globalsCode}
-
-// User code wrapped in async IIFE
+${mcpFactoryInjection}
 const __mcpRunDenoResult = await (async () => {
 ${wrappedCode}
 })();
 
-// Serialize and output result
 if (__mcpRunDenoResult !== undefined) {
   try {
     console.log('__MCP_RETURN_VALUE__:' + JSON.stringify(__mcpRunDenoResult));
@@ -335,120 +251,12 @@ if (__mcpRunDenoResult !== undefined) {
 `
   }
 
-  /**
-   * Install dependencies in isolated environment
-   * Step 1 of two-step security model: install with write permissions
-   */
-  private async installDependencies(
-    dependencies: string[],
-    timeout: number,
-    log?: LogHandler,
-  ): Promise<{
-    success: boolean
-    importMapFile?: string
-    depsDir?: string
-    output: string[]
-    error: string
-  }> {
-    const output: string[] = []
-
-    try {
-      // Create temp directory for dependencies
-      const depsDir = await Deno.makeTempDir({ prefix: 'mcp-deno-deps-' })
-
-      // Create import map
-      const importMap = {
-        imports: Object.fromEntries(
-          dependencies.map((dep) => {
-            // Extract package name from npm:package@version or jsr:@scope/package
-            const name = dep.replace(/^(npm:|jsr:)(@?[\w-]+\/)?/, '').split('@')[0]
-            return [name, dep]
-          }),
-        ),
-      }
-
-      const importMapFile = `${depsDir}/import_map.json`
-      await Deno.writeTextFile(importMapFile, JSON.stringify(importMap, null, 2))
-
-      // Create a simple script to trigger dependency installation
-      const installScript = `${depsDir}/install.ts`
-      const importStatements = dependencies.map((dep, i) => `import dep${i} from '${dep}';`).join(
-        '\n',
-      )
-      await Deno.writeTextFile(
-        installScript,
-        importStatements + '\nconsole.log("Dependencies installed");',
-      )
-
-      // Run with write permissions to cache dependencies
-      const cmd = new Deno.Command('deno', {
-        args: [
-          'run',
-          '--no-prompt',
-          '--allow-read',
-          '--allow-write',
-          '--allow-net',
-          '--import-map',
-          importMapFile,
-          installScript,
-        ],
-        stdout: 'piped',
-        stderr: 'piped',
-        cwd: depsDir,
-      })
-
-      log?.('debug', 'Installing dependencies...')
-
-      const process = cmd.spawn()
-      const timeoutId = setTimeout(() => {
-        process.kill('SIGTERM')
-      }, timeout)
-
-      const [stdoutData, stderrData, status] = await Promise.all([
-        this.readStream(process.stdout.getReader(), new TextDecoder()),
-        this.readStream(process.stderr.getReader(), new TextDecoder()),
-        process.status,
-      ])
-
-      clearTimeout(timeoutId)
-
-      output.push(...stdoutData, ...stderrData)
-
-      if (status.code !== 0) {
-        return {
-          success: false,
-          output,
-          error: `Dependency installation failed: ${stderrData.join('\n')}`,
-        }
-      }
-
-      return {
-        success: true,
-        importMapFile,
-        depsDir,
-        output,
-        error: '',
-      }
-    } catch (error) {
-      return {
-        success: false,
-        output,
-        error: error instanceof Error ? error.message : String(error),
-      }
-    }
-  }
-
-  /**
-   * Execute code in a Deno subprocess
-   * Step 2 of two-step security model: execute with read-only access
-   */
   private async executeInSubprocess(
     scriptPath: string,
     permissionFlags: string[],
     timeout: number,
-    cwd?: string,
+    cwd: string,
     log?: LogHandler,
-    importMapFile?: string,
   ): Promise<{
     success: boolean
     output: string[]
@@ -462,24 +270,28 @@ if (__mcpRunDenoResult !== undefined) {
     let error = ''
     let errorType: 'syntax' | 'runtime' | 'timeout' | 'permission' = 'runtime'
 
-    // Build command with import map if dependencies were installed
     const args = ['run', ...permissionFlags]
-    if (importMapFile) {
-      args.push('--import-map', importMapFile)
+
+    const denoJsonPath = `${cwd}/deno.json`
+    try {
+      await Deno.stat(denoJsonPath)
+      args.push('--config', denoJsonPath)
+      log?.('debug', `Using config: ${denoJsonPath}`)
+    } catch {
+      // No deno.json, continue without it
     }
+
     args.push(scriptPath)
 
     const cmd = new Deno.Command('deno', {
       args,
       stdout: 'piped',
       stderr: 'piped',
-      cwd: cwd,
+      cwd,
     })
 
-    // Spawn subprocess
     const process = cmd.spawn()
 
-    // Set up timeout
     const timeoutId = setTimeout(() => {
       process.kill('SIGTERM')
       success = false
@@ -621,7 +433,11 @@ if (__mcpRunDenoResult !== undefined) {
 /**
  * Format result as XML (for LLM-friendly output)
  */
-export function asXml(result: RunResult): string {
+export async function asXml(
+  result: RunResult,
+  workspaceDir?: string,
+  maxReturnSize?: number,
+): Promise<string> {
   const xml: string[] = [`<status>${result.status}</status>`]
 
   if (result.output.length > 0) {
@@ -632,9 +448,24 @@ export function asXml(result: RunResult): string {
 
   if (result.status === 'success') {
     if (result.returnValue) {
-      xml.push('<return_value>')
-      xml.push(escapeXml(result.returnValue))
-      xml.push('</return_value>')
+      const returnValueSize = new TextEncoder().encode(result.returnValue).length
+      const maxSize = maxReturnSize ?? 102400
+
+      if (returnValueSize > maxSize) {
+        const savedPath = await saveReturnValueToFile(result.returnValue, workspaceDir)
+        xml.push('<return_value>')
+        xml.push(
+          escapeXml(`[Large output (${formatBytes(returnValueSize)}) saved to file: ${savedPath}]`),
+        )
+        xml.push('</return_value>')
+        xml.push('<return_value_file>')
+        xml.push(escapeXml(savedPath))
+        xml.push('</return_value_file>')
+      } else {
+        xml.push('<return_value>')
+        xml.push(escapeXml(result.returnValue))
+        xml.push('</return_value>')
+      }
     }
   } else {
     xml.push('<error>')
@@ -646,6 +477,31 @@ export function asXml(result: RunResult): string {
   xml.push(`<execution_time>${result.executionTime.toFixed(2)}ms</execution_time>`)
 
   return xml.join('\n')
+}
+
+/**
+ * Save large return value to a file
+ */
+async function saveReturnValueToFile(returnValue: string, workspaceDir?: string): Promise<string> {
+  const workspace = workspaceDir ?? Deno.cwd()
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const filename = `output-${timestamp}.txt`
+  const filepath = `${workspace}/${filename}`
+
+  await Deno.mkdir(workspace, { recursive: true })
+  await Deno.writeTextFile(filepath, returnValue)
+
+  return filepath
+}
+
+/**
+ * Format bytes to human-readable string
+ */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
 /**

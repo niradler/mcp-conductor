@@ -21,10 +21,10 @@ environment variables.
 
 - 🔒 **Security First**: Deno's permission model with zero permissions by default
 - 🎛️ **Admin-Controlled**: Permissions configured via environment variables, not by the LLM
-- 📦 **Dependency Management**: Package allowlisting with two-step security isolation
-- ⚡ **Fast & Isolated**: Fresh subprocess per execution with <100ms startup
+- ⚡ **Fast & Simple**: Fresh subprocess per execution with <100ms startup
 - 🚫 **No Escalation**: LLMs cannot request additional permissions
-- 📁 **Workspace Isolation**: Filesystem access restricted to configured directory
+- 📁 **Workspace Isolation**: Code executes in workspace directory with deno.json support
+- 📦 **Standard Deno**: Uses Deno's natural caching - no custom dependency management
 - 🔌 **MCP Proxy**: Connect to multiple MCP servers and call their tools from within executed code
 
 ---
@@ -42,6 +42,8 @@ cd mcp-conductor
 ```
 
 ### 2. Configure in Cursor/Claude Desktop
+
+**Basic Configuration (Secure - No Network)**:
 
 Add to `.cursor/mcp.json` or Claude Desktop config:
 
@@ -63,13 +65,28 @@ Add to `.cursor/mcp.json` or Claude Desktop config:
       ],
       "env": {
         "MCP_CONDUCTOR_WORKSPACE": "${userHome}/.mcp-conductor/workspace",
-        "MCP_CONDUCTOR_ALLOWED_PACKAGES": "npm:axios@^1,npm:zod@^3,jsr:@std/path,jsr:@std/fs",
         "MCP_CONDUCTOR_RUN_ARGS": "allow-read=${userHome}/.mcp-conductor/workspace,allow-write=${userHome}/.mcp-conductor/workspace"
       }
     }
   }
 }
 ```
+
+**Note:** By default, `--cached-only` and `--no-remote` are added automatically for security. User
+code can only import pre-cached packages.
+
+**With Network Access (Less Secure - User Must Explicitly Enable)**:
+
+```json
+{
+  "env": {
+    "MCP_CONDUCTOR_WORKSPACE": "${userHome}/.mcp-conductor/workspace",
+    "MCP_CONDUCTOR_RUN_ARGS": "allow-read=${userHome}/.mcp-conductor/workspace,allow-write=${userHome}/.mcp-conductor/workspace,allow-net"
+  }
+}
+```
+
+**Note**: With `--allow-net`, the LLM can import any npm/jsr package dynamically.
 
 ### 3. Restart Your IDE
 
@@ -81,13 +98,138 @@ The LLM can now execute code with the configured permissions:
 
 ```typescript
 // LLM can write code that accesses the workspace
-const data = await Deno.readTextFile("/path/to/workspace/file.txt");
-const processed = data.toUpperCase();
-await Deno.writeTextFile("/path/to/workspace/output.txt", processed);
-processed;
+const data = await Deno.readTextFile('/path/to/workspace/file.txt')
+const processed = data.toUpperCase()
+await Deno.writeTextFile('/path/to/workspace/output.txt', processed)
+processed
 ```
 
 **Note**: The LLM cannot specify permissions - they're controlled by your environment variables!
+
+---
+
+## Security Model
+
+MCP Conductor uses a **zero-trust, two-process security model**:
+
+### Default Security Flags
+
+All user code runs with these security flags by default:
+
+- `--no-prompt` - Prevents interactive permission prompts
+- `--cached-only` - Only uses cached dependencies (no network fetching)
+- `--no-remote` - Blocks remote module fetching
+- **Zero permissions** - No file, network, environment, or subprocess access
+
+### Two-Process Isolation
+
+```
+Server Process (Trusted)
+├── Full permissions to manage workspace
+├── Install dependencies
+└── Spawn sandboxed subprocesses
+
+User Code Subprocess (Untrusted)  
+├── Zero permissions by default
+├── Cannot access server permissions
+├── Crashes don't affect server
+└── Fresh environment per execution
+```
+
+### Security Best Practices
+
+1. **Production**: Use minimal permissions
+   ```json
+   {
+     "env": {
+       "MCP_CONDUCTOR_RUN_ARGS": "allow-read=/workspace,allow-write=/workspace"
+     }
+   }
+   ```
+
+2. **Development**: Grant network access if needed
+   ```json
+   {
+     "env": {
+       "MCP_CONDUCTOR_RUN_ARGS": "allow-read=/workspace,allow-write=/workspace,allow-net"
+     }
+   }
+   ```
+
+3. **Never use** `--allow-all` in production
+
+### Code Execution is Unrestricted by Design
+
+Per [Deno's security documentation](https://docs.deno.com/runtime/fundamentals/security/):
+
+> "No limits on the execution of code at the same privilege level"
+
+These features are **allowed by design**:
+
+- `eval()` and `Function()` constructor
+- data: URLs (e.g., `import('data:text/javascript,...')`)
+- Dynamic imports and Workers
+- WebAssembly
+
+**The security boundary is the PERMISSION SANDBOX**, not code execution:
+
+- All code runs at zero permissions by default
+- Cannot access files, network, env vars, or spawn processes
+- Each execution isolated in fresh subprocess
+- Crashes don't affect server process
+
+This aligns with Deno's philosophy: trust the permission system, not code restrictions.
+
+---
+
+## Using Packages Without Network Access 📦
+
+To use npm/jsr packages without granting `--allow-net`, pre-cache them in your workspace:
+
+### Option 1: Using workspace deno.json
+
+Create `~/.mcp-conductor/workspace/deno.json`:
+
+```json
+{
+  "imports": {
+    "axios": "npm:axios@^1.6.0",
+    "zod": "npm:zod@^3.23.0",
+    "@std/path": "jsr:@std/path@^1"
+  }
+}
+```
+
+Then pre-cache the packages:
+
+```bash
+cd ~/.mcp-conductor/workspace
+deno cache --reload deno.json
+```
+
+Now LLM code can import them without network access:
+
+```typescript
+import axios from 'axios'
+import { z } from 'zod'
+import { join } from '@std/path'
+
+const response = await axios.get('https://api.example.com') // ❌ Fails (no --allow-net)
+// But imports work! ✅ (pre-cached)
+```
+
+### Option 2: Manual Pre-caching
+
+```bash
+cd ~/.mcp-conductor/workspace
+deno cache npm:axios@^1.6.0 npm:zod@^3.23.0 jsr:@std/path
+```
+
+**Security Note**: Deno's cache is global (`~/.cache/deno`). Once cached, packages can be imported
+without network access. The real security boundary is the **permission sandbox** (--allow-read,
+--allow-net, etc.), not package lists. Per
+[Deno's security model](https://docs.deno.com/runtime/fundamentals/security/), eval(), Function(),
+and dynamic imports are allowed by design.
 
 ---
 
@@ -142,28 +284,28 @@ Create `~/.mcp-conductor/mcp-config.json` (or set via `MCP_CONDUCTOR_MCP_CONFIG`
 // The LLM can write code that uses multiple MCP servers:
 
 // List available MCP servers
-const servers = await mcpFactory.listServers();
-console.log("Available servers:", servers);
+const servers = await mcpFactory.listServers()
+console.log('Available servers:', servers)
 
 // Load the GitHub MCP server
-const github = await mcpFactory.load("github");
+const github = await mcpFactory.load('github')
 
 // Call tools from the GitHub server
-const repos = await github.callTool("list_repos", {
-  username: "octocat",
-});
-console.log("Found repositories:", repos);
+const repos = await github.callTool('list_repos', {
+  username: 'octocat',
+})
+console.log('Found repositories:', repos)
 
 // Load the filesystem server
-const fs = await mcpFactory.load("filesystem");
+const fs = await mcpFactory.load('filesystem')
 
 // Save the results
-await fs.callTool("write_file", {
-  path: "/allowed/directory/repos.json",
+await fs.callTool('write_file', {
+  path: '/allowed/directory/repos.json',
   content: JSON.stringify(repos, null, 2),
-});
+})
 
-("Multi-server workflow complete!");
+'Multi-server workflow complete!'
 ```
 
 ### Available MCP Proxy Tools
@@ -180,16 +322,16 @@ MCP Conductor also exposes these tools for discovering available MCP servers:
 // (using the list_mcp_servers tool, separate from code execution)
 
 // Then write code that uses those servers
-const github = await mcpFactory.load("github");
-const tools = await github.listTools();
-console.log(`GitHub server has ${tools.length} tools available`);
+const github = await mcpFactory.load('github')
+const tools = await github.listTools()
+console.log(`GitHub server has ${tools.length} tools available`)
 
 // Use a specific tool
-const issues = await github.callTool("search_issues", {
-  query: "is:open label:bug",
-  repo: "myorg/myrepo",
-});
-`Found ${issues.length} open bugs`;
+const issues = await github.callTool('search_issues', {
+  query: 'is:open label:bug',
+  repo: 'myorg/myrepo',
+})
+;`Found ${issues.length} open bugs`
 ```
 
 ### Security Considerations
@@ -285,9 +427,9 @@ process data or perform calculations.
 
 ```typescript
 // LLM writes code, admin controls permissions
-const data = await Deno.readTextFile("./workspace/data.csv");
-const processed = data.split("\n").map((line) => line.toUpperCase());
-processed.join("\n");
+const data = await Deno.readTextFile('./workspace/data.csv')
+const processed = data.split('\n').map((line) => line.toUpperCase())
+processed.join('\n')
 ```
 
 ### 2. Multi-System Integration via MCP Proxy
@@ -296,27 +438,27 @@ Connect to multiple MCP servers and orchestrate complex workflows across systems
 
 ```typescript
 // Query GitHub for issues
-const github = await mcpFactory.load("github");
-const issues = await github.callTool("list_issues", {
-  repo: "myorg/myrepo",
-  state: "open",
-});
+const github = await mcpFactory.load('github')
+const issues = await github.callTool('list_issues', {
+  repo: 'myorg/myrepo',
+  state: 'open',
+})
 
 // Save to filesystem
-const fs = await mcpFactory.load("filesystem");
-await fs.callTool("write_file", {
-  path: "./workspace/issues.json",
+const fs = await mcpFactory.load('filesystem')
+await fs.callTool('write_file', {
+  path: './workspace/issues.json',
   content: JSON.stringify(issues, null, 2),
-});
+})
 
 // Send summary to Slack
-const slack = await mcpFactory.load("slack");
-await slack.callTool("post_message", {
-  channel: "#updates",
+const slack = await mcpFactory.load('slack')
+await slack.callTool('post_message', {
+  channel: '#updates',
   text: `Found ${issues.length} open issues`,
-});
+})
 
-("Workflow complete!");
+'Workflow complete!'
 ```
 
 ### 3. Data Processing with External APIs
@@ -325,18 +467,18 @@ Fetch data, process it, and integrate with other services:
 
 ```typescript
 // Fetch from external API (if --allow-net permission granted)
-const response = await fetch("https://api.example.com/data");
-const data = await response.json();
+const response = await fetch('https://api.example.com/data')
+const data = await response.json()
 
 // Process with TypeScript
 const summary = data.items
-  .filter((item) => item.status === "active")
-  .reduce((acc, item) => acc + item.value, 0);
+  .filter((item) => item.status === 'active')
+  .reduce((acc, item) => acc + item.value, 0)
 
 // Store in workspace
-await Deno.writeTextFile("./workspace/summary.txt", `Total: ${summary}`);
+await Deno.writeTextFile('./workspace/summary.txt', `Total: ${summary}`)
 
-summary;
+summary
 ```
 
 ---
@@ -522,12 +664,12 @@ All code executes in a Deno subprocess with **NO permissions** unless explicitly
 
 ```typescript
 // ❌ This will FAIL - no network access by default
-await fetch("https://api.example.com");
+await fetch('https://api.example.com')
 
 // ✅ This works - permission explicitly granted
 await conductor.execute(convId, code, {
-  permissions: { net: ["api.example.com"] },
-});
+  permissions: { net: ['api.example.com'] },
+})
 ```
 
 #### 2. **Deno Permission Model**
@@ -551,12 +693,12 @@ Deno provides fine-grained permissions that must be explicitly granted:
 
 ```typescript
 // LLM writes (no version specified):
-dependencies:;
-["npm:axios"];
+dependencies: ;
+;['npm:axios']
 
 // Server auto-injects (from MCP_CONDUCTOR_ALLOWED_PACKAGES):
-dependencies:;
-["npm:axios@^1"]; // ← Admin-controlled version
+dependencies: ;
+;['npm:axios@^1'] // ← Admin-controlled version
 ```
 
 **Benefits**:
@@ -600,7 +742,7 @@ Following the [mcp-run-python security model](https://github.com/pydantic/mcp-ru
 ```typescript
 // Write permission ONLY to dependency cache
 // Untrusted code CANNOT run yet
-await installDependencies(["npm:axios", "npm:lodash"]);
+await installDependencies(['npm:axios', 'npm:lodash'])
 ```
 
 **Step 2**: Execute code with read-only access
@@ -609,7 +751,7 @@ await installDependencies(["npm:axios", "npm:lodash"]);
 // Dependencies cached and available
 // Code has NO write permissions to dependency directory
 // Cannot modify or inject malicious dependencies
-await runCode(userCode, { permissions: { read: ["./node_modules"] } });
+await runCode(userCode, { permissions: { read: ['./node_modules'] } })
 ```
 
 #### 5. **Resource Limits**
@@ -629,13 +771,13 @@ Every execution has strict resource limits:
    ```typescript
    // Good: specific domain
    {
-     net:;
-     ["api.github.com"];
+     net: ;
+     ;['api.github.com']
    }
 
    // Bad: all network access
    {
-     net: true;
+     net: true
    }
    ```
 
@@ -652,8 +794,8 @@ Every execution has strict resource limits:
 3. **Validate User Input** - Always validate before execution:
 
    ```typescript
-   if (code.includes("Deno.exit") || code.includes("eval(")) {
-     throw new Error("Forbidden operations detected");
+   if (code.includes('Deno.exit') || code.includes('eval(')) {
+     throw new Error('Forbidden operations detected')
    }
    ```
 
@@ -662,12 +804,12 @@ Every execution has strict resource limits:
    ```typescript
    // Fast operations
    {
-     timeout: 5000;
+     timeout: 5000
    } // 5 seconds
 
    // API calls
    {
-     timeout: 30000;
+     timeout: 30000
    } // 30 seconds (default)
    ```
 
@@ -675,9 +817,9 @@ Every execution has strict resource limits:
    ```typescript
    await conductor.execute(convId, code, {
      onLog: (level, message) => {
-       logger.info({ level, message, convId, timestamp: Date.now() });
+       logger.info({ level, message, convId, timestamp: Date.now() })
      },
-   });
+   })
    ```
 
 #### ❌ **DON'T**
@@ -687,7 +829,7 @@ Every execution has strict resource limits:
    ```typescript
    // ❌ DANGEROUS - grants all permissions
    {
-     all: true;
+     all: true
    }
    ```
 
@@ -695,11 +837,11 @@ Every execution has strict resource limits:
 
    ```typescript
    // ❌ BAD - no validation
-   await conductor.execute(convId, userProvidedCode);
+   await conductor.execute(convId, userProvidedCode)
 
    // ✅ GOOD - validate first
-   validateCode(userProvidedCode);
-   await conductor.execute(convId, userProvidedCode);
+   validateCode(userProvidedCode)
+   await conductor.execute(convId, userProvidedCode)
    ```
 
 3. **Don't Grant Write to System Directories**:
@@ -707,8 +849,8 @@ Every execution has strict resource limits:
    ```typescript
    // ❌ EXTREMELY DANGEROUS
    {
-     write:;
-     ["/etc", "/usr", "/bin"];
+     write: ;
+     ;['/etc', '/usr', '/bin']
    }
    ```
 
@@ -717,13 +859,13 @@ Every execution has strict resource limits:
    ```typescript
    // ❌ BAD - can run any command
    {
-     run: true;
+     run: true
    }
 
    // ✅ GOOD - specific commands only
    {
-     run:;
-     ["git", "npm"];
+     run: ;
+     ;['git', 'npm']
    }
    ```
 
@@ -731,14 +873,14 @@ Every execution has strict resource limits:
 
    ```typescript
    // ❌ BAD - silent failures
-   await conductor.execute(convId, code).catch(() => {});
+   await conductor.execute(convId, code).catch(() => {})
 
    // ✅ GOOD - handle and log
    try {
-     await conductor.execute(convId, code);
+     await conductor.execute(convId, code)
    } catch (error) {
-     logger.error("Execution failed", error);
-     throw error;
+     logger.error('Execution failed', error)
+     throw error
    }
    ```
 

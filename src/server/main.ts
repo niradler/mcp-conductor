@@ -18,7 +18,6 @@ import { z } from 'npm:zod@^3.23.8'
 
 import { asJson, asXml, RunCode } from '../executor/runCode.ts'
 import type { ServerConfig } from '../types/types.ts'
-import { DEFAULT_ALLOWED_DEPENDENCIES, validateDependencies } from '../executor/allowlist.ts'
 import { ensureWorkspaceDir } from '../executor/workspace.ts'
 import { loadConfigFromEnv } from './config.ts'
 import { MCPManager } from '../mcp-proxy/manager.ts'
@@ -27,6 +26,63 @@ import { generateMcpFactoryCode } from '../mcp-proxy/factory.ts'
 import { createMCPProxyTools } from '../mcp-proxy/tools.ts'
 
 const VERSION = '0.1.0'
+
+async function autoCacheWorkspacePackages(workspaceDir: string): Promise<void> {
+  try {
+    const denoJsonPath = `${workspaceDir}/deno.json`
+
+    try {
+      await Deno.stat(denoJsonPath)
+    } catch {
+      return
+    }
+
+    console.error('📦 Found deno.json in workspace, caching packages...')
+
+    // Read deno.json to get imports
+    const denoJsonContent = await Deno.readTextFile(denoJsonPath)
+    const denoJson = JSON.parse(denoJsonContent)
+    const imports = denoJson.imports || {}
+
+    if (Object.keys(imports).length === 0) {
+      console.error('⚠️  No imports found in deno.json')
+      return
+    }
+
+    // Create temporary file that imports all packages
+    const tempCacheFile = `${workspaceDir}/.mcp-cache-deps.ts`
+    const importStatements = Object.keys(imports)
+      .map((pkg) => `import '${pkg}'`)
+      .join('\n')
+
+    await Deno.writeTextFile(tempCacheFile, importStatements)
+
+    const cmd = new Deno.Command('deno', {
+      args: ['cache', '--reload', '--config', denoJsonPath, tempCacheFile],
+      cwd: workspaceDir,
+      stdout: 'piped',
+      stderr: 'piped',
+    })
+
+    const process = await cmd.output()
+
+    // Clean up temp file
+    try {
+      await Deno.remove(tempCacheFile)
+    } catch {
+      // Ignore cleanup errors
+    }
+
+    if (process.code === 0) {
+      console.error('✅ Workspace packages cached successfully')
+    } else {
+      const stderr = new TextDecoder().decode(process.stderr)
+      console.error(`⚠️  Warning: Failed to cache packages: ${stderr}`)
+    }
+  } catch (error) {
+    console.error(`⚠️  Warning: Error caching workspace packages: ${error}`)
+  }
+}
 
 /**
  * Create and configure the MCP server
@@ -80,28 +136,17 @@ export async function createServer(config: ServerConfig = {}): Promise<McpServer
     mcpFactoryCode = null
   }
 
-  // Create executor with default run args
-  const runCode = new RunCode(defaultRunArgs)
-
-  // Set MCP factory code if available
-  if (mcpFactoryCode) {
-    runCode.setMcpFactoryCode(mcpFactoryCode)
-  }
-
   const returnMode = finalConfig.returnMode ?? 'xml'
 
-  // Ensure workspace directory exists
   const workspaceDir = await ensureWorkspaceDir(finalConfig.workspaceDir)
   console.error(`MCP Conductor workspace: ${workspaceDir}`)
 
-  // Get allowed dependencies list
-  const allowedDependencies = finalConfig.allowedDependencies ?? DEFAULT_ALLOWED_DEPENDENCIES
-  const isRestrictive = Array.isArray(allowedDependencies)
+  await autoCacheWorkspacePackages(workspaceDir)
 
-  if (isRestrictive) {
-    console.error(`Dependency allowlist enabled: ${allowedDependencies.length} packages allowed`)
-  } else {
-    console.error('⚠️  WARNING: All dependencies allowed (allowedDependencies: true)')
+  const runCode = new RunCode(defaultRunArgs, workspaceDir, finalConfig.maxReturnSize)
+
+  if (mcpFactoryCode) {
+    runCode.setMcpFactoryCode(mcpFactoryCode)
   }
 
   if (defaultRunArgs.length > 0) {
@@ -133,7 +178,8 @@ export async function createServer(config: ServerConfig = {}): Promise<McpServer
   })
 
   // Define the tool schema
-  const toolDescription = `Execute TypeScript/JavaScript in sandboxed Deno subprocess. Permissions set by admin via env vars.
+  const toolDescription =
+    `Execute TypeScript/JavaScript in sandboxed Deno subprocess. Permissions set by admin via env vars.
 
 **Deno Quick Reference**:
 
@@ -156,12 +202,13 @@ Environment:
 const key = Deno.env.get("API_KEY");
 \`\`\`
 
-HTTP Server:
+Temporal (Date/Time):
 \`\`\`typescript
-Deno.serve({ port: 8000 }, (req) => new Response("Hello"));
+const birthday = Temporal.PlainMonthDay.from("12-15");
+const birthdayIn2030 = birthday.toPlainDate({ year: 2030 });
 \`\`\`
 
-Imports (use .ts extension):
+Imports
 \`\`\`typescript
 import { serve } from "jsr:@std/http";
 import axios from "npm:axios@^1";
@@ -193,59 +240,25 @@ Last expression is returned as result.
       inputSchema: {
         deno_code: z.string().describe('TypeScript or JavaScript code to execute'),
         timeout: z.number().optional().describe(
-          'Execution timeout in milliseconds (default: 30000, max: 300000)',
-        ),
-        globals: z.record(z.string(), z.any()).optional().describe(
-          'Global variables to inject into execution context',
-        ),
-        dependencies: z.array(z.string()).optional().describe(
-          'NPM or JSR dependencies to install (e.g., ["npm:axios@1.6.0", "jsr:@std/path"]). Must be in the server allowlist.',
+          'Execution timeout in milliseconds (default: 30000, max: 600000)',
         ),
       },
     },
     async ({
       deno_code,
       timeout,
-      globals,
-      dependencies,
     }: {
       deno_code: string
       timeout?: number
-      globals?: Record<string, unknown>
-      dependencies?: string[]
     }) => {
       const logPromises: Promise<void>[] = []
 
-      // Validate dependencies against allowlist
-      let enrichedDependencies = dependencies
-      if (dependencies && dependencies.length > 0) {
-        const validation = validateDependencies(dependencies, allowedDependencies)
-        if (!validation.valid) {
-          return {
-            content: [{
-              type: 'text',
-              text:
-                `<status>error</status>\n<error>\n<type>dependency-not-allowed</type>\n<message>The following dependencies are not allowed:\n\n${validation.errors.join('\n')
-                }\n\nAllowed dependencies: ${isRestrictive ? allowedDependencies.join(', ') : 'all'
-                }</message>\n</error>`,
-            }],
-          }
-        }
-        // Use enriched dependencies with versions from allowlist
-        enrichedDependencies = validation.enriched
-      }
-
-      // Execute the code (permissions come from default run args set by env vars)
       const result = await runCode.run(
         {
           code: deno_code,
-          // Don't pass permissions - they come from defaultRunArgs in constructor
           timeout: timeout ?? finalConfig.defaultTimeout,
-          globals,
-          dependencies: enrichedDependencies, // Use enriched dependencies
         },
         (level, data) => {
-          // Only log if level meets threshold
           const levels: LoggingLevel[] = [
             'debug',
             'info',
@@ -262,14 +275,14 @@ Last expression is returned as result.
         },
       )
 
-      // Wait for all log messages to be sent
       await Promise.all(logPromises)
 
-      // Return result in requested format
       return {
         content: [{
           type: 'text',
-          text: returnMode === 'xml' ? asXml(result) : asJson(result),
+          text: returnMode === 'xml'
+            ? await asXml(result, workspaceDir, finalConfig.maxReturnSize)
+            : asJson(result),
         }],
       }
     },
@@ -466,7 +479,7 @@ console.log('Factorial of 10:', result)
 result
 `
 
-  const runCode = new RunCode()
+  const runCode = new RunCode([], '/tmp')
   const result = await runCode.run({
     code,
     permissions: {},
@@ -474,7 +487,7 @@ result
   })
 
   console.error('\nExecution Result:')
-  console.error(asXml(result))
+  console.error(await asXml(result, '/tmp'))
 
   if (result.status !== 'success') {
     Deno.exit(1)

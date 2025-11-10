@@ -1,10 +1,12 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@std/assert@*": "1.0.15",
     "jsr:@std/assert@1": "1.0.15",
     "jsr:@std/cli@1": "1.0.23",
     "jsr:@std/internal@^1.0.10": "1.0.12",
     "jsr:@std/internal@^1.0.12": "1.0.12",
+    "jsr:@std/path@*": "1.1.2",
     "jsr:@std/path@1": "1.1.2",
     "npm:@modelcontextprotocol/sdk@^1.0.4": "1.21.1_ajv@8.17.1_express@5.1.0_zod@3.25.76",
     "npm:@types/node@*": "24.2.0",

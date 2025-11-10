@@ -8,7 +8,7 @@ function isPathSafe(path: string): boolean {
   return isAbsolute(normalized) && !normalized.includes('..')
 }
 
-export async function getConfigPath(): Promise<string> {
+export function getConfigPath(): string {
   const configPath = getDefaultConfigPath()
   if (!isPathSafe(configPath)) {
     console.error('Invalid config path (path traversal detected), using default')
@@ -81,7 +81,7 @@ export function validateConfig(config: MCPServerConfig): { valid: boolean; error
     }
 
     if (hasUrl && !('transport' in serverConfig)) {
-      ;(serverConfig as any).transport = 'sse'
+      ;(serverConfig as { transport?: string }).transport = 'sse'
     }
   }
 

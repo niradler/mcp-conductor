@@ -30,18 +30,10 @@ export interface DenoPermissions {
  * Code execution options
  */
 export interface ExecutionOptions {
-  /** The code to execute */
   code: string
-  /** Permissions for the code execution */
   permissions?: DenoPermissions
-  /** Execution timeout in milliseconds (default: 30000) */
   timeout?: number
-  /** Global variables to inject into the execution context */
-  globals?: Record<string, unknown>
-  /** Working directory for code execution */
   cwd?: string
-  /** NPM/JSR dependencies to install (e.g., ['npm:axios@1.6.0', 'jsr:@std/path']) */
-  dependencies?: string[]
 }
 
 /**
@@ -86,19 +78,12 @@ export type LogHandler = (level: LoggingLevel, message: string) => void
  * Server configuration
  */
 export interface ServerConfig {
-  /** Default permissions for code execution */
   defaultPermissions?: DenoPermissions
-  /** Default timeout in milliseconds */
   defaultTimeout?: number
-  /** Maximum allowed timeout in milliseconds */
   maxTimeout?: number
-  /** Return mode for results */
+  maxReturnSize?: number
   returnMode?: 'json' | 'xml'
-  /** Workspace directory for file operations (default: ~/.mcp-conductor/sessions) */
   workspaceDir?: string
-  /** Allowed dependencies - array of allowed packages or true for all */
-  allowedDependencies?: string[] | true
-  /** Default Deno run arguments when no permissions specified (e.g., ['--no-prompt', '--allow-read=/tmp']) */
   defaultRunArgs?: string[]
 }
 
