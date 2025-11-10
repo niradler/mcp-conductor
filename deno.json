@@ -1,7 +1,10 @@
 {
   "name": "@mcp/conductor",
   "version": "0.2.0",
-  "exports": "./src/server/main.ts",
+  "exports": {
+    ".": "./src/cli/cli.ts",
+    "./server": "./src/server/main.ts"
+  },
   "tasks": {
     "dev": "deno run --allow-all --watch src/cli/cli.ts",
     "start": "deno run --allow-all src/cli/cli.ts",
@@ -33,5 +36,13 @@
     "indentWidth": 2,
     "semiColons": false,
     "singleQuote": true
+  },
+  "publish": {
+    "exclude": [
+      "tests/",
+      ".cursor/",
+      "examples/",
+      "coverage/"
+    ]
   }
 }
