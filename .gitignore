@@ -37,3 +37,11 @@ temp/
 
 # Lock files (optional - include if you want reproducible builds)
 # deno.lock
+
+# Docker
+.docker/
+docker-compose.override.yml
+*.env.docker
+
+# Workspace (user data)
+workspace/

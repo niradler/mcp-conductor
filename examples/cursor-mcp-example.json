@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "mcp-conductor-jsr": {
+      "command": "deno",
+      "args": [
+        "run",
+        "--no-prompt",
+        "--allow-read",
+        "--allow-write",
+        "--allow-net",
+        "--allow-env",
+        "--allow-run=deno",
+        "jsr:@conductor/mcp@^0.1",
+        "stdio"
+      ],
+      "env": {
+        "MCP_CONDUCTOR_WORKSPACE": "${userHome}/.mcp-conductor/workspace",
+        "MCP_CONDUCTOR_RUN_ARGS": "allow-read=${userHome}/.mcp-conductor/workspace,allow-write=${userHome}/.mcp-conductor/workspace"
+      }
+    },
+    "mcp-conductor-local": {
+      "command": "deno",
+      "args": [
+        "run",
+        "--no-prompt",
+        "--allow-read",
+        "--allow-write",
+        "--allow-net",
+        "--allow-env",
+        "--allow-run=deno",
+        "src/cli/cli.ts",
+        "stdio"
+      ],
+      "cwd": "${workspaceFolder}/path/to/mcp-conductor",
+      "env": {
+        "MCP_CONDUCTOR_WORKSPACE": "${userHome}/.mcp-conductor/workspace",
+        "MCP_CONDUCTOR_RUN_ARGS": "allow-read=${userHome}/.mcp-conductor/workspace,allow-write=${userHome}/.mcp-conductor/workspace"
+      }
+    }
+  }
+}
+

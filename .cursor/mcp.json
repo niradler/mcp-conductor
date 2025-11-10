@@ -13,6 +13,20 @@
         "src/cli/cli.ts",
         "stdio"
       ]
+    },
+    "mcp-conductor-jsr": {
+      "command": "deno",
+      "args": [
+        "run",
+        "--no-prompt",
+        "--allow-read",
+        "--allow-write",
+        "--allow-net",
+        "--allow-env",
+        "--allow-run",
+        "jsr:@conductor/mcp",
+        "stdio"
+      ]
     }
   }
 }

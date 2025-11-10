@@ -1,0 +1,44 @@
+{
+  "mcpServers": {
+    "mcp-conductor-docker-stdio": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-v",
+        "${userHome}/.mcp-conductor/workspace:/workspace",
+        "mcp-conductor:latest",
+        "stdio"
+      ],
+      "env": {
+        "MCP_CONDUCTOR_WORKSPACE": "/workspace",
+        "MCP_CONDUCTOR_RUN_ARGS": "allow-read=/workspace,allow-write=/workspace"
+      }
+    },
+    "mcp-conductor-docker-http": {
+      "url": "http://localhost:3000",
+      "transport": "http"
+    },
+    "mcp-conductor-docker-compose": {
+      "command": "docker-compose",
+      "args": [
+        "exec",
+        "-T",
+        "mcp-conductor",
+        "deno",
+        "run",
+        "--no-prompt",
+        "--allow-read",
+        "--allow-write",
+        "--allow-net",
+        "--allow-env",
+        "--allow-run=deno",
+        "src/cli/cli.ts",
+        "stdio"
+      ],
+      "cwd": "${workspaceFolder}/path/to/mcp-conductor"
+    }
+  }
+}
+
