@@ -68,6 +68,7 @@ function parseRunArgs(value?: string, workspaceDir?: string): string[] {
       ...SECURE_DEFAULTS.runArgs,
       `--allow-read=${workspace}`,
       `--allow-write=${workspace}`,
+      '--allow-net=localhost',
     ]
   }
 
