@@ -1,5 +1,5 @@
 {
-  "name": "@mcp/conductor",
+  "name": "@conductor/mcp",
   "version": "0.2.0",
   "description": "Secure Deno code execution for AI agents via Model Context Protocol. Execute TypeScript/JavaScript in isolated, permission-controlled sandboxes.",
   "license": "MIT",
