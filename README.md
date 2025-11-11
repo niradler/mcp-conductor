@@ -19,7 +19,8 @@ of TypeScript and JavaScript code for AI agents. Built on Deno's security-first 
 LLMs to run code with fine-grained permission control configured entirely by administrators via
 environment variables.
 
-**Zero Installation**: Available on [JSR](https://jsr.io/@conductor/mcp) - no installation required, just add to your MCP configuration and go!
+**Zero Installation**: Available on [JSR](https://jsr.io/@conductor/mcp) - no installation required,
+just add to your MCP configuration and go!
 
 ### Key Features
 
@@ -39,7 +40,8 @@ environment variables.
 
 **Option A: Direct from JSR (Recommended)**
 
-No installation required! MCP Conductor is available on the JSR registry and can be used directly in your MCP configuration:
+No installation required! MCP Conductor is available on the JSR registry and can be used directly in
+your MCP configuration:
 
 ```json
 {
@@ -111,7 +113,8 @@ docker run -d \
 docker-compose up -d mcp-conductor
 ```
 
-See the [Docker section](#docker-deployment) below for detailed configuration options, or check out the comprehensive [Docker Deployment Guide](examples/DOCKER.md) for advanced scenarios.
+See the [Docker section](#docker-deployment) below for detailed configuration options, or check out
+the comprehensive [Docker Deployment Guide](examples/DOCKER.md) for advanced scenarios.
 
 ### 2. Configure in Cursor/Claude Desktop
 
@@ -146,7 +149,8 @@ Add to `.cursor/mcp.json` or Claude Desktop config:
 
 **For Claude Desktop**:
 
-Add the same configuration to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows).
+Add the same configuration to `~/Library/Application Support/Claude/claude_desktop_config.json`
+(macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows).
 
 **For Local Development** (use source instead of JSR):
 
@@ -178,10 +182,10 @@ The LLM can now execute code with the configured permissions:
 
 ```typescript
 // LLM can write code that accesses the workspace
-const data = await Deno.readTextFile("/path/to/workspace/file.txt");
-const processed = data.toUpperCase();
-await Deno.writeTextFile("/path/to/workspace/output.txt", processed);
-processed;
+const data = await Deno.readTextFile('/path/to/workspace/file.txt')
+const processed = data.toUpperCase()
+await Deno.writeTextFile('/path/to/workspace/output.txt', processed)
+processed
 ```
 
 **Note**: The LLM cannot specify permissions - they're controlled by your environment variables!
@@ -292,11 +296,11 @@ deno cache --reload deno.json
 Now LLM code can import them without network access:
 
 ```typescript
-import axios from "axios";
-import { z } from "zod";
-import { join } from "@std/path";
+import axios from 'axios'
+import { z } from 'zod'
+import { join } from '@std/path'
 
-const response = await axios.get("https://api.example.com"); // ❌ Fails (no --allow-net)
+const response = await axios.get('https://api.example.com') // ❌ Fails (no --allow-net)
 // But imports work! ✅ (pre-cached)
 ```
 
@@ -366,28 +370,28 @@ Create `~/.mcp-conductor/mcp-config.json` (or set via `MCP_CONDUCTOR_MCP_CONFIG`
 // The LLM can write code that uses multiple MCP servers:
 
 // List available MCP servers
-const servers = await mcpFactory.listServers();
-console.log("Available servers:", servers);
+const servers = await mcpFactory.listServers()
+console.log('Available servers:', servers)
 
 // Load the GitHub MCP server
-const github = await mcpFactory.load("github");
+const github = await mcpFactory.load('github')
 
 // Call tools from the GitHub server
-const repos = await github.callTool("list_repos", {
-  username: "octocat",
-});
-console.log("Found repositories:", repos);
+const repos = await github.callTool('list_repos', {
+  username: 'octocat',
+})
+console.log('Found repositories:', repos)
 
 // Load the filesystem server
-const fs = await mcpFactory.load("filesystem");
+const fs = await mcpFactory.load('filesystem')
 
 // Save the results
-await fs.callTool("write_file", {
-  path: "/allowed/directory/repos.json",
+await fs.callTool('write_file', {
+  path: '/allowed/directory/repos.json',
   content: JSON.stringify(repos, null, 2),
-});
+})
 
-("Multi-server workflow complete!");
+'Multi-server workflow complete!'
 ```
 
 ### Available MCP Proxy Tools
@@ -404,16 +408,16 @@ MCP Conductor also exposes these tools for discovering available MCP servers:
 // (using the list_mcp_servers tool, separate from code execution)
 
 // Then write code that uses those servers
-const github = await mcpFactory.load("github");
-const tools = await github.listTools();
-console.log(`GitHub server has ${tools.length} tools available`);
+const github = await mcpFactory.load('github')
+const tools = await github.listTools()
+console.log(`GitHub server has ${tools.length} tools available`)
 
 // Use a specific tool
-const issues = await github.callTool("search_issues", {
-  query: "is:open label:bug",
-  repo: "myorg/myrepo",
-});
-`Found ${issues.length} open bugs`;
+const issues = await github.callTool('search_issues', {
+  query: 'is:open label:bug',
+  repo: 'myorg/myrepo',
+})
+;`Found ${issues.length} open bugs`
 ```
 
 ### Security Considerations
@@ -445,7 +449,8 @@ See [docs/ENV_VARS.md](docs/ENV_VARS.md) for detailed configuration guide.
 
 ### Example Configurations
 
-- [Cursor IDE Example](examples/cursor-mcp-example.json) - Shows both JSR and local development setups
+- [Cursor IDE Example](examples/cursor-mcp-example.json) - Shows both JSR and local development
+  setups
 - [Claude Desktop Example](examples/claude-desktop-example.json) - Production-ready configuration
 - [MCP Proxy Config](examples/mcp-config-example.json) - How to configure other MCP servers
 - [Docker MCP Config](examples/docker-mcp-config.json) - Using Docker containers with MCP
@@ -454,7 +459,8 @@ See [docs/ENV_VARS.md](docs/ENV_VARS.md) for detailed configuration guide.
 
 ## Docker Deployment
 
-MCP Conductor can be deployed as a Docker container for production environments, providing complete isolation and consistent deployments.
+MCP Conductor can be deployed as a Docker container for production environments, providing complete
+isolation and consistent deployments.
 
 ### Building the Image
 
@@ -638,11 +644,11 @@ spec:
               mountPath: /workspace
           resources:
             limits:
-              memory: "512Mi"
-              cpu: "1000m"
+              memory: '512Mi'
+              cpu: '1000m'
             requests:
-              memory: "256Mi"
-              cpu: "500m"
+              memory: '256Mi'
+              cpu: '500m'
       volumes:
         - name: workspace
           persistentVolumeClaim:
@@ -745,9 +751,9 @@ process data or perform calculations.
 
 ```typescript
 // LLM writes code, admin controls permissions
-const data = await Deno.readTextFile("./workspace/data.csv");
-const processed = data.split("\n").map((line) => line.toUpperCase());
-processed.join("\n");
+const data = await Deno.readTextFile('./workspace/data.csv')
+const processed = data.split('\n').map((line) => line.toUpperCase())
+processed.join('\n')
 ```
 
 ### 2. Multi-System Integration via MCP Proxy
@@ -756,27 +762,27 @@ Connect to multiple MCP servers and orchestrate complex workflows across systems
 
 ```typescript
 // Query GitHub for issues
-const github = await mcpFactory.load("github");
-const issues = await github.callTool("list_issues", {
-  repo: "myorg/myrepo",
-  state: "open",
-});
+const github = await mcpFactory.load('github')
+const issues = await github.callTool('list_issues', {
+  repo: 'myorg/myrepo',
+  state: 'open',
+})
 
 // Save to filesystem
-const fs = await mcpFactory.load("filesystem");
-await fs.callTool("write_file", {
-  path: "./workspace/issues.json",
+const fs = await mcpFactory.load('filesystem')
+await fs.callTool('write_file', {
+  path: './workspace/issues.json',
   content: JSON.stringify(issues, null, 2),
-});
+})
 
 // Send summary to Slack
-const slack = await mcpFactory.load("slack");
-await slack.callTool("post_message", {
-  channel: "#updates",
+const slack = await mcpFactory.load('slack')
+await slack.callTool('post_message', {
+  channel: '#updates',
   text: `Found ${issues.length} open issues`,
-});
+})
 
-("Workflow complete!");
+'Workflow complete!'
 ```
 
 ### 3. Data Processing with External APIs
@@ -785,18 +791,18 @@ Fetch data, process it, and integrate with other services:
 
 ```typescript
 // Fetch from external API (if --allow-net permission granted)
-const response = await fetch("https://api.example.com/data");
-const data = await response.json();
+const response = await fetch('https://api.example.com/data')
+const data = await response.json()
 
 // Process with TypeScript
 const summary = data.items
-  .filter((item) => item.status === "active")
-  .reduce((acc, item) => acc + item.value, 0);
+  .filter((item) => item.status === 'active')
+  .reduce((acc, item) => acc + item.value, 0)
 
 // Store in workspace
-await Deno.writeTextFile("./workspace/summary.txt", `Total: ${summary}`);
+await Deno.writeTextFile('./workspace/summary.txt', `Total: ${summary}`)
 
-summary;
+summary
 ```
 
 ---
@@ -846,6 +852,8 @@ Execute TypeScript/JavaScript code in a secure Deno sandbox.
 - stdout/stderr capture
 - Admin-controlled permissions
 - Auto-injected `mcpFactory` for MCP proxy access (if enabled)
+- Auto-injected global variables: `WORKSPACE_DIR`, `PLAYBOOKS_DIR`, `ROOT_DIR`, `PERMISSIONS`
+- Easy playbook imports via `importPlaybook()` helper function
 
 ### 2. `list_mcp_servers` (if MCP proxy enabled)
 
@@ -956,12 +964,12 @@ All code executes in a Deno subprocess with **NO permissions** unless explicitly
 
 ```typescript
 // ❌ This will FAIL - no network access by default
-await fetch("https://api.example.com");
+await fetch('https://api.example.com')
 
 // ✅ This works - permission explicitly granted
 await conductor.execute(convId, code, {
-  permissions: { net: ["api.example.com"] },
-});
+  permissions: { net: ['api.example.com'] },
+})
 ```
 
 #### 2. **Deno Permission Model**
@@ -985,12 +993,12 @@ Deno provides fine-grained permissions that must be explicitly granted:
 
 ```typescript
 // LLM writes (no version specified):
-dependencies:;
-["npm:axios"];
+dependencies: ;
+;['npm:axios']
 
 // Server auto-injects (from MCP_CONDUCTOR_ALLOWED_PACKAGES):
-dependencies:;
-["npm:axios@^1"]; // ← Admin-controlled version
+dependencies: ;
+;['npm:axios@^1'] // ← Admin-controlled version
 ```
 
 **Benefits**:
@@ -1034,7 +1042,7 @@ Following the [mcp-run-python security model](https://github.com/pydantic/mcp-ru
 ```typescript
 // Write permission ONLY to dependency cache
 // Untrusted code CANNOT run yet
-await installDependencies(["npm:axios", "npm:lodash"]);
+await installDependencies(['npm:axios', 'npm:lodash'])
 ```
 
 **Step 2**: Execute code with read-only access
@@ -1043,7 +1051,7 @@ await installDependencies(["npm:axios", "npm:lodash"]);
 // Dependencies cached and available
 // Code has NO write permissions to dependency directory
 // Cannot modify or inject malicious dependencies
-await runCode(userCode, { permissions: { read: ["./node_modules"] } });
+await runCode(userCode, { permissions: { read: ['./node_modules'] } })
 ```
 
 #### 5. **Resource Limits**
@@ -1063,13 +1071,13 @@ Every execution has strict resource limits:
    ```typescript
    // Good: specific domain
    {
-     net:;
-     ["api.github.com"];
+     net: ;
+     ;['api.github.com']
    }
 
    // Bad: all network access
    {
-     net: true;
+     net: true
    }
    ```
 
@@ -1086,8 +1094,8 @@ Every execution has strict resource limits:
 3. **Validate User Input** - Always validate before execution:
 
    ```typescript
-   if (code.includes("Deno.exit") || code.includes("eval(")) {
-     throw new Error("Forbidden operations detected");
+   if (code.includes('Deno.exit') || code.includes('eval(')) {
+     throw new Error('Forbidden operations detected')
    }
    ```
 
@@ -1096,12 +1104,12 @@ Every execution has strict resource limits:
    ```typescript
    // Fast operations
    {
-     timeout: 5000;
+     timeout: 5000
    } // 5 seconds
 
    // API calls
    {
-     timeout: 30000;
+     timeout: 30000
    } // 30 seconds (default)
    ```
 
@@ -1109,9 +1117,9 @@ Every execution has strict resource limits:
    ```typescript
    await conductor.execute(convId, code, {
      onLog: (level, message) => {
-       logger.info({ level, message, convId, timestamp: Date.now() });
+       logger.info({ level, message, convId, timestamp: Date.now() })
      },
-   });
+   })
    ```
 
 #### ❌ **DON'T**
@@ -1121,7 +1129,7 @@ Every execution has strict resource limits:
    ```typescript
    // ❌ DANGEROUS - grants all permissions
    {
-     all: true;
+     all: true
    }
    ```
 
@@ -1129,11 +1137,11 @@ Every execution has strict resource limits:
 
    ```typescript
    // ❌ BAD - no validation
-   await conductor.execute(convId, userProvidedCode);
+   await conductor.execute(convId, userProvidedCode)
 
    // ✅ GOOD - validate first
-   validateCode(userProvidedCode);
-   await conductor.execute(convId, userProvidedCode);
+   validateCode(userProvidedCode)
+   await conductor.execute(convId, userProvidedCode)
    ```
 
 3. **Don't Grant Write to System Directories**:
@@ -1141,8 +1149,8 @@ Every execution has strict resource limits:
    ```typescript
    // ❌ EXTREMELY DANGEROUS
    {
-     write:;
-     ["/etc", "/usr", "/bin"];
+     write: ;
+     ;['/etc', '/usr', '/bin']
    }
    ```
 
@@ -1151,13 +1159,13 @@ Every execution has strict resource limits:
    ```typescript
    // ❌ BAD - can run any command
    {
-     run: true;
+     run: true
    }
 
    // ✅ GOOD - specific commands only
    {
-     run:;
-     ["git", "npm"];
+     run: ;
+     ;['git', 'npm']
    }
    ```
 
@@ -1165,14 +1173,14 @@ Every execution has strict resource limits:
 
    ```typescript
    // ❌ BAD - silent failures
-   await conductor.execute(convId, code).catch(() => {});
+   await conductor.execute(convId, code).catch(() => {})
 
    // ✅ GOOD - handle and log
    try {
-     await conductor.execute(convId, code);
+     await conductor.execute(convId, code)
    } catch (error) {
-     logger.error("Execution failed", error);
-     throw error;
+     logger.error('Execution failed', error)
+     throw error
    }
    ```
 

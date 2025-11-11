@@ -2,27 +2,27 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'npm:zod@^3.23.8'
 
 export function registerPrompts(server: McpServer): void {
-    server.registerPrompt(
-        'execute_task',
-        {
-            title: 'Execute Task with Code',
-            description:
-                'Execute any task using TypeScript/JavaScript in a secure Deno sandbox with access to MCP servers, packages, and APIs',
-            argsSchema: {
-                task: z.string().describe('What you want to accomplish'),
-                requirements: z.string().optional().describe('Specific requirements or constraints'),
-            },
-        },
-        ({ task, requirements }: { task: string; requirements?: string }) => {
-            const reqPart = requirements ? `\n\n**Requirements:** ${requirements}` : ''
+  server.registerPrompt(
+    'execute_task',
+    {
+      title: 'Execute Task with Code',
+      description:
+        'Execute any task using TypeScript/JavaScript in a secure Deno sandbox with access to MCP servers, packages, and APIs',
+      argsSchema: {
+        task: z.string().describe('What you want to accomplish'),
+        requirements: z.string().optional().describe('Specific requirements or constraints'),
+      },
+    },
+    ({ task, requirements }: { task: string; requirements?: string }) => {
+      const reqPart = requirements ? `\n\n**Requirements:** ${requirements}` : ''
 
-            return {
-                messages: [
-                    {
-                        role: 'user',
-                        content: {
-                            type: 'text',
-                            text: `# Task
+      return {
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: `# Task
 ${task}${reqPart}
 
 # Solution Approach
@@ -189,37 +189,37 @@ return {
 ---
 
 **Now solve the task above using these principles. Be efficient, secure, and flexible.**`,
-                        },
-                    },
-                ],
-            }
-        },
-    )
-
-    server.registerPrompt(
-        'usage_guide',
-        {
-            title: 'MCP Conductor Usage Guide',
-            description:
-                'Comprehensive guide on using MCP Conductor effectively: security, performance, MCP proxy, packages, and best practices',
-            argsSchema: {
-                topic: z.string().optional().describe(
-                    'Specific topic: security, performance, mcp-proxy, packages, or all (default)',
-                ),
             },
-        },
-        ({ topic }: { topic?: string }) => {
-            const t = topic?.toLowerCase() || 'all'
-            const showAll = t === 'all'
+          },
+        ],
+      }
+    },
+  )
 
-            let guide = `# MCP Conductor - Complete Usage Guide
+  server.registerPrompt(
+    'usage_guide',
+    {
+      title: 'MCP Conductor Usage Guide',
+      description:
+        'Comprehensive guide on using MCP Conductor effectively: security, performance, MCP proxy, packages, and best practices',
+      argsSchema: {
+        topic: z.string().optional().describe(
+          'Specific topic: security, performance, mcp-proxy, packages, or all (default)',
+        ),
+      },
+    },
+    ({ topic }: { topic?: string }) => {
+      const t = topic?.toLowerCase() || 'all'
+      const showAll = t === 'all'
+
+      let guide = `# MCP Conductor - Complete Usage Guide
 
 MCP Conductor executes TypeScript/JavaScript code in a secure Deno sandbox with unique capabilities that make it powerful for LLM agents.
 
 `
 
-            if (showAll || t === 'overview' || t === 'key-features') {
-                guide += `## 🌟 What Makes This Special
+      if (showAll || t === 'overview' || t === 'key-features') {
+        guide += `## 🌟 What Makes This Special
 
 **1. Token Efficiency**
 - Execute complex multi-step workflows in ONE tool call
@@ -244,10 +244,10 @@ MCP Conductor executes TypeScript/JavaScript code in a secure Deno sandbox with 
 ---
 
 `
-            }
+      }
 
-            if (showAll || t === 'security') {
-                guide += `## 🔒 Security Model
+      if (showAll || t === 'security') {
+        guide += `## 🔒 Security Model
 
 **Core Principles:**
 - **Zero Trust:** No permissions by default
@@ -287,10 +287,10 @@ function validate(input: string): string {
 ---
 
 `
-            }
+      }
 
-            if (showAll || t === 'performance' || t === 'efficiency') {
-                guide += `## ⚡ Performance & Token Efficiency
+      if (showAll || t === 'performance' || t === 'efficiency') {
+        guide += `## ⚡ Performance & Token Efficiency
 
 **Rule #1: Combine Operations**
 \`\`\`typescript
@@ -351,10 +351,10 @@ console.log(\`Completed in \${duration.toFixed(2)}ms\`)
 ---
 
 `
-            }
+      }
 
-            if (showAll || t === 'mcp-proxy' || t === 'mcp') {
-                guide += `## 🔌 MCP Proxy - The Game Changer
+      if (showAll || t === 'mcp-proxy' || t === 'mcp') {
+        guide += `## 🔌 MCP Proxy - The Game Changer
 
 Call OTHER MCP servers from within your code execution!
 
@@ -426,10 +426,10 @@ if (typeof mcpFactory !== 'undefined') {
 ---
 
 `
-            }
+      }
 
-            if (showAll || t === 'packages') {
-                guide += `## 📦 Package Management
+      if (showAll || t === 'packages') {
+        guide += `## 📦 Package Management
 
 **NPM Packages:**
 \`\`\`typescript
@@ -465,10 +465,10 @@ Server will auto-cache these on startup = faster execution!
 ---
 
 `
-            }
+      }
 
-            if (showAll || t === 'examples' || t === 'patterns') {
-                guide += `## 🎯 Complete Example
+      if (showAll || t === 'examples' || t === 'patterns') {
+        guide += `## 🎯 Complete Example
 
 Demonstrating ALL principles:
 
@@ -546,9 +546,9 @@ if (typeof mcpFactory !== 'undefined') {
 ---
 
 `
-            }
+      }
 
-            guide += `## 🚀 Quick Reference
+      guide += `## 🚀 Quick Reference
 
 **Deno APIs:**
 - Files: \`Deno.readTextFile()\`, \`Deno.writeTextFile()\`, \`Deno.readDir()\`
@@ -572,17 +572,17 @@ if (typeof mcpFactory !== 'undefined') {
 **Remember:** The power of MCP Conductor is in combining these capabilities to solve complex tasks efficiently in a single execution!
 `
 
-            return {
-                messages: [
-                    {
-                        role: 'user',
-                        content: {
-                            type: 'text',
-                            text: guide,
-                        },
-                    },
-                ],
-            }
-        },
-    )
+      return {
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: guide,
+            },
+          },
+        ],
+      }
+    },
+  )
 }

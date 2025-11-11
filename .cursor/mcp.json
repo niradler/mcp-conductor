@@ -12,7 +12,10 @@
         "--allow-run",
         "src/cli/cli.ts",
         "stdio"
-      ]
+      ],
+      "env": {
+        "MCP_CONDUCTOR_RUN_ARGS": "allow-all"
+      }
     },
     "mcp-conductor-jsr": {
       "command": "deno",

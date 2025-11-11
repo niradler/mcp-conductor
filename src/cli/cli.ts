@@ -42,7 +42,7 @@ async function main() {
 
   // Build server config from CLI args
   const config: ServerConfig = {
-    returnMode: args['return-mode'] as 'json' | 'xml',
+    returnMode: args['return-mode'] as 'json' | 'yaml',
     defaultTimeout: parseInt(args.timeout),
     maxTimeout: parseInt(args['max-timeout']),
   }

@@ -16,7 +16,7 @@ await client.connect(transport)
 console.log('📋 Listing available prompts...\n')
 const prompts = await client.listPrompts()
 console.log(`Found ${prompts.prompts.length} prompts:`)
-prompts.prompts.forEach(p => {
+prompts.prompts.forEach((p) => {
   console.log(`  • ${p.name}: ${p.description}`)
 })
 
@@ -25,9 +25,9 @@ console.log('🎯 Testing execute_task prompt')
 console.log('='.repeat(60))
 const task = await client.getPrompt({
   name: 'execute_task',
-  arguments: { 
-    task: 'Fetch GitHub repository information', 
-    requirements: 'Use parallel calls for efficiency' 
+  arguments: {
+    task: 'Fetch GitHub repository information',
+    requirements: 'Use parallel calls for efficiency',
   },
 })
 console.log(`Length: ${task.messages[0].content.text.length} characters`)
@@ -72,4 +72,3 @@ console.log(`  - execute_task: ${task.messages[0].content.text.length} chars`)
 console.log(`  - usage_guide (all): ${guide.messages[0].content.text.length} chars`)
 console.log(`  - usage_guide (mcp-proxy): ${mcpGuide.messages[0].content.text.length} chars`)
 console.log(`  - usage_guide (performance): ${perfGuide.messages[0].content.text.length} chars`)
-

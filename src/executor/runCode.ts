@@ -22,6 +22,8 @@ export class RunCode {
   private readonly defaultRunArgs: string[] = []
   private readonly workspaceDir: string
   private mcpFactoryCode: string | null = null
+  private playbooksDir: string | null = null
+  private rootDir: string | null = null
 
   constructor(defaultRunArgs?: string[], workspaceDir?: string, maxReturnSize?: number) {
     this.defaultRunArgs = defaultRunArgs ?? []
@@ -31,6 +33,14 @@ export class RunCode {
 
   setMcpFactoryCode(code: string | null): void {
     this.mcpFactoryCode = code
+  }
+
+  setPlaybooksDir(dir: string | null): void {
+    this.playbooksDir = dir
+  }
+
+  setRootDir(dir: string | null): void {
+    this.rootDir = dir
   }
 
   /**
@@ -118,9 +128,41 @@ export class RunCode {
    * Wrap user code to capture return value and handle async
    */
   private wrapCode(code: string): string {
-    const mcpFactoryInjection = this.mcpFactoryCode
-      ? `try {\n${this.mcpFactoryCode}\n} catch (e) {\n  console.error('Failed to initialize MCP factory:', e);\n}\n\n`
-      : ''
+    const playbooksPath = this.playbooksDir
+      ? `'${this.playbooksDir.replace(/\\/g, '\\\\')}'`
+      : 'null'
+    const workspacePath = `'${this.workspaceDir.replace(/\\/g, '\\\\')}'`
+    const rootPath = this.rootDir ? `'${this.rootDir.replace(/\\/g, '\\\\')}'` : 'null'
+    const permissionsArray = JSON.stringify(this.defaultRunArgs)
+
+    const injectionCode = `
+// MCP Conductor - Injected Globals
+${
+      this.mcpFactoryCode
+        ? `try {\n${this.mcpFactoryCode}\n} catch (e) {\n  console.error('Failed to initialize MCP factory:', e);\n}`
+        : ''
+    }
+
+// Inject useful globals
+globalThis.WORKSPACE_DIR = ${workspacePath};
+globalThis.PLAYBOOKS_DIR = ${playbooksPath};
+globalThis.ROOT_DIR = ${rootPath};
+globalThis.PERMISSIONS = ${permissionsArray};
+
+// Helper function to import playbooks easily
+globalThis.importPlaybook = async function(playbookName) {
+  const playbooksPath = globalThis.PLAYBOOKS_DIR;
+  if (!playbooksPath) {
+    throw new Error('PLAYBOOKS_DIR is not available');
+  }
+  
+  const importPath = Deno.build.os === 'windows'
+    ? \`file://\${playbooksPath.replace(/\\\\/g, '/')}/\${playbookName}/playbook.ts\`
+    : \`file://\${playbooksPath}/\${playbookName}/playbook.ts\`;
+  
+  return await import(importPath);
+};
+`.trim()
 
     const trimmedCode = code.trim()
 
@@ -140,7 +182,8 @@ export class RunCode {
         const precedingLines = lines.slice(0, -1).join('\n')
         return `
 // MCP Run Deno - Module Execution
-${mcpFactoryInjection}
+${injectionCode}
+
 ${precedingLines}
 
 const __mcpRunDenoResult = ${valueExpr}
@@ -176,7 +219,8 @@ if (__mcpRunDenoResult !== undefined) {
         const precedingLines = lines.slice(0, -1).join('\n')
         return `
 // MCP Run Deno - Module Execution
-${mcpFactoryInjection}
+${injectionCode}
+
 ${precedingLines}
 
 const __mcpRunDenoResult = ${lastLine};
@@ -192,7 +236,8 @@ if (__mcpRunDenoResult !== undefined) {
       } else {
         return `
 // MCP Run Deno - Module Execution
-${mcpFactoryInjection}
+${injectionCode}
+
 ${trimmedCode}
 `
       }
@@ -236,7 +281,8 @@ ${trimmedCode}
 
     return `
 // MCP Run Deno - Execution Wrapper
-${mcpFactoryInjection}
+${injectionCode}
+
 const __mcpRunDenoResult = await (async () => {
 ${wrappedCode}
 })();
@@ -431,19 +477,22 @@ if (__mcpRunDenoResult !== undefined) {
 }
 
 /**
- * Format result as XML (for LLM-friendly output)
+ * Format result as YAML (clean, human-readable output)
  */
-export async function asXml(
+export async function asYaml(
   result: RunResult,
   workspaceDir?: string,
   maxReturnSize?: number,
 ): Promise<string> {
-  const xml: string[] = [`<status>${result.status}</status>`]
+  const lines: string[] = []
+
+  lines.push(`status: ${result.status}`)
 
   if (result.output.length > 0) {
-    xml.push('<output>')
-    xml.push(...result.output.map(escapeXml))
-    xml.push('</output>')
+    lines.push('output:')
+    result.output.forEach((line) => {
+      lines.push(`  - ${JSON.stringify(line)}`)
+    })
   }
 
   if (result.status === 'success') {
@@ -453,30 +502,31 @@ export async function asXml(
 
       if (returnValueSize > maxSize) {
         const savedPath = await saveReturnValueToFile(result.returnValue, workspaceDir)
-        xml.push('<return_value>')
-        xml.push(
-          escapeXml(`[Large output (${formatBytes(returnValueSize)}) saved to file: ${savedPath}]`),
-        )
-        xml.push('</return_value>')
-        xml.push('<return_value_file>')
-        xml.push(escapeXml(savedPath))
-        xml.push('</return_value_file>')
+        lines.push(`return_value: "[Large output (${formatBytes(returnValueSize)}) saved to file]"`)
+        lines.push(`return_value_file: "${savedPath}"`)
       } else {
-        xml.push('<return_value>')
-        xml.push(escapeXml(result.returnValue))
-        xml.push('</return_value>')
+        try {
+          const parsed = JSON.parse(result.returnValue)
+          lines.push('return_value:')
+          const yamlValue = JSON.stringify(parsed, null, 2)
+            .split('\n')
+            .map((line) => `  ${line}`)
+            .join('\n')
+          lines.push(yamlValue)
+        } catch {
+          lines.push(`return_value: ${JSON.stringify(result.returnValue)}`)
+        }
       }
     }
   } else {
-    xml.push('<error>')
-    xml.push(`<type>${result.errorType}</type>`)
-    xml.push(`<message>${escapeXml(result.error)}</message>`)
-    xml.push('</error>')
+    lines.push('error:')
+    lines.push(`  type: ${result.errorType}`)
+    lines.push(`  message: ${JSON.stringify(result.error)}`)
   }
 
-  xml.push(`<execution_time>${result.executionTime.toFixed(2)}ms</execution_time>`)
+  lines.push(`execution_time: ${result.executionTime.toFixed(2)}ms`)
 
-  return xml.join('\n')
+  return lines.join('\n')
 }
 
 /**
@@ -524,16 +574,4 @@ export function asJson(result: RunResult): string {
       executionTime: result.executionTime,
     })
   }
-}
-
-/**
- * Escape XML special characters
- */
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
 }
