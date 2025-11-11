@@ -1,4 +1,4 @@
-import { dirname, join } from 'node:path'
+import { dirname, fromFileUrl, join } from 'jsr:@std/path@^1'
 
 const DEFAULT_PLAYBOOKS_SOURCE = 'playbooks'
 
@@ -10,10 +10,8 @@ export async function ensureDefaultPlaybooks(rootDir: string): Promise<void> {
   const targetDir = join(rootDir, 'playbooks')
   await Deno.mkdir(targetDir, { recursive: true })
 
-  // Find the source directory (relative to this file or absolute)
   const sourceDir = getSourcePlaybooksDir()
 
-  // Check if source exists
   try {
     await Deno.stat(sourceDir)
   } catch {
@@ -21,7 +19,6 @@ export async function ensureDefaultPlaybooks(rootDir: string): Promise<void> {
     return
   }
 
-  // Copy each system playbook
   for await (const entry of Deno.readDir(sourceDir)) {
     if (!entry.isDirectory) continue
 
@@ -30,7 +27,6 @@ export async function ensureDefaultPlaybooks(rootDir: string): Promise<void> {
     const mdSource = join(sourcePath, 'playbook.md')
     const mdTarget = join(targetPath, 'playbook.md')
 
-    // Check if it's a system playbook
     let isSystemPlaybook = false
     try {
       const content = await Deno.readTextFile(mdSource)
@@ -41,17 +37,14 @@ export async function ensureDefaultPlaybooks(rootDir: string): Promise<void> {
 
     if (!isSystemPlaybook) continue
 
-    // Check if we should skip (user has modified it)
     try {
       const existingContent = await Deno.readTextFile(mdTarget)
       if (!existingContent.includes('source: system')) {
-        continue // User modified it, don't override
+        continue
       }
     } catch {
-      // Doesn't exist, will install
     }
 
-    // Copy the playbook
     try {
       await copyPlaybookFolder(sourcePath, targetPath)
       console.log(`✓ Installed default playbook: ${entry.name}`)
@@ -62,14 +55,7 @@ export async function ensureDefaultPlaybooks(rootDir: string): Promise<void> {
 }
 
 function getSourcePlaybooksDir(): string {
-  // Try to find playbooks directory relative to this file
-  let modulePath = new URL(import.meta.url).pathname
-
-  // Fix Windows path (remove leading slash from /C:/)
-  if (Deno.build.os === 'windows' && /^\/[A-Za-z]:/.test(modulePath)) {
-    modulePath = modulePath.slice(1)
-  }
-
+  const modulePath = fromFileUrl(import.meta.url)
   const moduleDir = dirname(modulePath)
   const projectRoot = join(moduleDir, '..', '..')
   return join(projectRoot, DEFAULT_PLAYBOOKS_SOURCE)

@@ -3,6 +3,7 @@
  * Executes TypeScript/JavaScript code in an isolated Deno subprocess
  */
 
+import { dirname, join } from 'jsr:@std/path@^1'
 import type {
   ExecutionOptions,
   LogHandler,
@@ -128,20 +129,17 @@ export class RunCode {
    * Wrap user code to capture return value and handle async
    */
   private wrapCode(code: string): string {
-    const playbooksPath = this.playbooksDir
-      ? `'${this.playbooksDir.replace(/\\/g, '\\\\')}'`
-      : 'null'
-    const workspacePath = `'${this.workspaceDir.replace(/\\/g, '\\\\')}'`
-    const rootPath = this.rootDir ? `'${this.rootDir.replace(/\\/g, '\\\\')}'` : 'null'
+    const playbooksPath = this.playbooksDir ? JSON.stringify(this.playbooksDir) : 'null'
+    const workspacePath = JSON.stringify(this.workspaceDir)
+    const rootPath = this.rootDir ? JSON.stringify(this.rootDir) : 'null'
     const permissionsArray = JSON.stringify(this.defaultRunArgs)
 
     const injectionCode = `
 // MCP Conductor - Injected Globals
-${
-      this.mcpFactoryCode
+${this.mcpFactoryCode
         ? `try {\n${this.mcpFactoryCode}\n} catch (e) {\n  console.error('Failed to initialize MCP factory:', e);\n}`
         : ''
-    }
+      }
 
 // Inject useful globals
 globalThis.WORKSPACE_DIR = ${workspacePath};
@@ -156,9 +154,9 @@ globalThis.importPlaybook = async function(playbookName) {
     throw new Error('PLAYBOOKS_DIR is not available');
   }
   
-  const importPath = Deno.build.os === 'windows'
-    ? \`file://\${playbooksPath.replace(/\\\\/g, '/')}/\${playbookName}/playbook.ts\`
-    : \`file://\${playbooksPath}/\${playbookName}/playbook.ts\`;
+  const { join, toFileUrl } = await import('jsr:@std/path@^1');
+  const playbookPath = join(playbooksPath, playbookName, 'playbook.ts');
+  const importPath = toFileUrl(playbookPath).href;
   
   return await import(importPath);
 };
@@ -275,8 +273,8 @@ ${trimmedCode}
       wrappedCode = isLikelyExpression && precedingLines
         ? `${precedingLines}\nreturn ${lastLine}`
         : isLikelyExpression
-        ? `return ${lastLine}`
-        : trimmedCode
+          ? `return ${lastLine}`
+          : trimmedCode
     }
 
     return `
@@ -318,13 +316,12 @@ if (__mcpRunDenoResult !== undefined) {
 
     const args = ['run', ...permissionFlags]
 
-    const denoJsonPath = `${cwd}/deno.json`
+    const denoJsonPath = join(cwd, 'deno.json')
     try {
       await Deno.stat(denoJsonPath)
       args.push('--config', denoJsonPath)
       log?.('debug', `Using config: ${denoJsonPath}`)
     } catch {
-      // No deno.json, continue without it
     }
 
     args.push(scriptPath)
@@ -458,7 +455,7 @@ if (__mcpRunDenoResult !== undefined) {
    */
   private async writeTempFile(code: string): Promise<string> {
     const tempDir = await Deno.makeTempDir({ prefix: 'mcp-run-deno-' })
-    const tempFile = `${tempDir}/script.ts`
+    const tempFile = join(tempDir, 'script.ts')
     await Deno.writeTextFile(tempFile, code)
     return tempFile
   }
@@ -468,10 +465,9 @@ if (__mcpRunDenoResult !== undefined) {
    */
   private async deleteTempFile(path: string): Promise<void> {
     try {
-      const dir = path.substring(0, path.lastIndexOf('/'))
+      const dir = dirname(path)
       await Deno.remove(dir, { recursive: true })
     } catch {
-      // Ignore cleanup errors
     }
   }
 }
@@ -533,10 +529,11 @@ export async function asYaml(
  * Save large return value to a file
  */
 async function saveReturnValueToFile(returnValue: string, workspaceDir?: string): Promise<string> {
+  const { join } = await import('jsr:@std/path@^1')
   const workspace = workspaceDir ?? Deno.cwd()
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
   const filename = `output-${timestamp}.txt`
-  const filepath = `${workspace}/${filename}`
+  const filepath = join(workspace, filename)
 
   await Deno.mkdir(workspace, { recursive: true })
   await Deno.writeTextFile(filepath, returnValue)

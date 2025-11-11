@@ -44,15 +44,15 @@
  * is the defense, not restricting code execution mechanisms.
  */
 
+import { join } from 'jsr:@std/path@^1'
 import type { ServerConfig } from '../types/types.ts'
 
-const DEFAULT_ROOT_DIR = (Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '.') +
-  (Deno.build.os === 'windows' ? '\\' : '/') +
-  '.mcp-conductor' +
-  (Deno.build.os === 'windows' ? '\\' : '/')
+const DEFAULT_ROOT_DIR = join(
+  Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '.',
+  '.mcp-conductor',
+)
 
-const DEFAULT_WORKSPACE = DEFAULT_ROOT_DIR +
-  'workspace'
+const DEFAULT_WORKSPACE = join(DEFAULT_ROOT_DIR, 'workspace')
 
 export const SECURE_DEFAULTS = {
   workspace: DEFAULT_WORKSPACE,

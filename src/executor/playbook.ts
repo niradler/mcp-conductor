@@ -1,12 +1,11 @@
+import { join } from 'jsr:@std/path@^1'
 import { parse as parseYaml } from 'jsr:@std/yaml@^1'
 import type { PlaybookFile, PlaybookListItem, PlaybookMetadata } from '../types/playbook.ts'
 
 const PLAYBOOK_FOLDER = 'playbooks'
 
 export function getPlaybooksDir(rootDir: string): string {
-  const sep = Deno.build.os === 'windows' ? '\\' : '/'
-  const normalizedRoot = rootDir.endsWith(sep) ? rootDir.slice(0, -1) : rootDir
-  return `${normalizedRoot}${sep}${PLAYBOOK_FOLDER}`
+  return join(rootDir, PLAYBOOK_FOLDER)
 }
 
 export async function ensurePlaybooksDir(rootDir: string): Promise<string> {
@@ -47,15 +46,14 @@ export async function parsePlaybookMarkdown(mdPath: string): Promise<{
 export async function listPlaybooks(rootDir: string): Promise<PlaybookListItem[]> {
   const playbooksDir = await ensurePlaybooksDir(rootDir)
   const playbooks: PlaybookListItem[] = []
-  const sep = Deno.build.os === 'windows' ? '\\' : '/'
 
   try {
     for await (const entry of Deno.readDir(playbooksDir)) {
       if (!entry.isDirectory) continue
 
-      const folderPath = `${playbooksDir}${sep}${entry.name}`
-      const mdPath = `${folderPath}${sep}playbook.md`
-      const tsPath = `${folderPath}${sep}playbook.ts`
+      const folderPath = join(playbooksDir, entry.name)
+      const mdPath = join(folderPath, 'playbook.md')
+      const tsPath = join(folderPath, 'playbook.ts')
 
       try {
         const { metadata } = await parsePlaybookMarkdown(mdPath)
@@ -88,10 +86,9 @@ export async function listPlaybooks(rootDir: string): Promise<PlaybookListItem[]
 
 export async function getPlaybook(rootDir: string, folderName: string): Promise<PlaybookFile> {
   const playbooksDir = getPlaybooksDir(rootDir)
-  const sep = Deno.build.os === 'windows' ? '\\' : '/'
-  const folderPath = `${playbooksDir}${sep}${folderName}`
-  const mdPath = `${folderPath}${sep}playbook.md`
-  const tsPath = `${folderPath}${sep}playbook.ts`
+  const folderPath = join(playbooksDir, folderName)
+  const mdPath = join(folderPath, 'playbook.md')
+  const tsPath = join(folderPath, 'playbook.ts')
 
   try {
     await Deno.stat(folderPath)
@@ -117,8 +114,7 @@ export async function createPlaybook(
   codeContent?: string,
 ): Promise<string> {
   const playbooksDir = await ensurePlaybooksDir(rootDir)
-  const sep = Deno.build.os === 'windows' ? '\\' : '/'
-  const folderPath = `${playbooksDir}${sep}${folderName}`
+  const folderPath = join(playbooksDir, folderName)
 
   await Deno.mkdir(folderPath, { recursive: true })
 
@@ -134,15 +130,14 @@ export async function createPlaybook(
     metadata.tags.forEach((tag) => yamlFrontmatter.push('  - ' + tag))
   }
 
-  // Add source field (defaults to 'user')
   yamlFrontmatter.push('source: ' + (metadata.source || 'user'))
 
   const mdContent = `---\n${yamlFrontmatter.join('\n')}\n---\n\n${markdownContent}`
-  const mdPath = `${folderPath}${sep}playbook.md`
+  const mdPath = join(folderPath, 'playbook.md')
   await Deno.writeTextFile(mdPath, mdContent)
 
   if (codeContent) {
-    const tsPath = `${folderPath}${sep}playbook.ts`
+    const tsPath = join(folderPath, 'playbook.ts')
     await Deno.writeTextFile(tsPath, codeContent)
   }
 

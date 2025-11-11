@@ -1,3 +1,4 @@
+import { join } from 'jsr:@std/path@^1'
 import { assertEquals, assertStringIncludes } from 'jsr:@std/assert@^1'
 import {
   createPlaybook,
@@ -12,9 +13,8 @@ const TEST_ROOT = await Deno.makeTempDir({ prefix: 'mcp-playbook-test-' })
 
 Deno.test('Playbook - getPlaybooksDir', () => {
   const dir = getPlaybooksDir(TEST_ROOT)
-  const sep = Deno.build.os === 'windows' ? '\\' : '/'
   assertStringIncludes(dir, 'playbooks')
-  assertEquals(dir, `${TEST_ROOT}${sep}playbooks`)
+  assertEquals(dir, join(TEST_ROOT, 'playbooks'))
 })
 
 Deno.test('Playbook - ensurePlaybooksDir', async () => {
@@ -38,17 +38,16 @@ Deno.test('Playbook - createPlaybook', async () => {
     'export function testFunc() { return "hello"; }',
   )
 
-  const sep = Deno.build.os === 'windows' ? '\\' : '/'
   assertStringIncludes(folderPath, 'test-playbook')
 
-  const mdContent = await Deno.readTextFile(`${folderPath}${sep}playbook.md`)
+  const mdContent = await Deno.readTextFile(join(folderPath, 'playbook.md'))
   assertStringIncludes(mdContent, 'name: Test Playbook')
   assertStringIncludes(mdContent, 'description: A test playbook')
   assertStringIncludes(mdContent, 'author: Test Author')
   assertStringIncludes(mdContent, 'version: 1.0.0')
   assertStringIncludes(mdContent, 'This is the content of the playbook.')
 
-  const tsContent = await Deno.readTextFile(`${folderPath}${sep}playbook.ts`)
+  const tsContent = await Deno.readTextFile(join(folderPath, 'playbook.ts'))
   assertStringIncludes(tsContent, 'export function testFunc')
 })
 
