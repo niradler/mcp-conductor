@@ -72,6 +72,23 @@ if (typeof mcpFactory !== 'undefined') {
 
 **To discover available servers:** Use \`list_mcp_servers\` and \`get_tools\` tools BEFORE writing code.
 
+## 📚 Playbooks - Reusable Code Patterns
+
+Import and use pre-built utilities from playbooks:
+
+\`\`\`typescript
+// Import from any playbook using the helper function
+const { fetchJSON } = await importPlaybook('http-utilities')
+
+// Use the imported functions
+const data = await fetchJSON('https://api.github.com/users/denoland/repos', {
+  retries: 3,
+  timeout: 10000
+})
+\`\`\`
+
+**To discover playbooks:** Use \`list_playbooks\` and \`get_playbook\` tools BEFORE writing code.
+
 ## 📦 Package Imports
 
 \`\`\`typescript
@@ -166,6 +183,20 @@ try {
     error: error.message
   }
 }
+\`\`\`
+
+## 🌍 Available Globals
+
+Auto-injected variables available in your code:
+
+\`\`\`typescript
+const workspace = globalThis.WORKSPACE_DIR  // Your workspace path
+const playbooks = globalThis.PLAYBOOKS_DIR  // Playbooks directory
+const root = globalThis.ROOT_DIR            // MCP Conductor root
+const perms = globalThis.PERMISSIONS        // Current permissions array
+
+// Helper function to import playbooks
+const utils = await importPlaybook('playbook-name')
 \`\`\`
 
 ## Available Deno APIs
@@ -557,6 +588,11 @@ if (typeof mcpFactory !== 'undefined') {
 - Environment: \`Deno.env.get('VAR')\`
 - Time: \`Temporal.Now.instant()\`, \`performance.now()\`
 
+**Playbooks:**
+- Import: \`const utils = await importPlaybook('playbook-name')\`
+- Discover: Use \`list_playbooks\` and \`get_playbook\` tools
+- Globals: \`WORKSPACE_DIR\`, \`PLAYBOOKS_DIR\`, \`ROOT_DIR\`, \`PERMISSIONS\`
+
 **MCP Proxy:**
 - Check: \`typeof mcpFactory !== 'undefined'\`
 - Load: \`const server = await mcpFactory.load('server-name')\`
@@ -567,6 +603,7 @@ if (typeof mcpFactory !== 'undefined') {
 - ✅ Use Promise.all for parallel operations (performance)
 - ✅ Handle permission errors gracefully (security)
 - ✅ Return structured data with metadata (best practice)
+- ✅ Use playbooks for common patterns (code reuse)
 - ✅ Use MCP proxy to leverage other servers (flexibility)
 
 **Remember:** The power of MCP Conductor is in combining these capabilities to solve complex tasks efficiently in a single execution!
