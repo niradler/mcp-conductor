@@ -136,11 +136,10 @@ export class RunCode {
 
     const injectionCode = `
 // MCP Conductor - Injected Globals
-${
-      this.mcpFactoryCode
+${this.mcpFactoryCode
         ? `try {\n${this.mcpFactoryCode}\n} catch (e) {\n  console.error('Failed to initialize MCP factory:', e);\n}`
         : ''
-    }
+      }
 
 // Inject useful globals
 globalThis.WORKSPACE_DIR = ${workspacePath};
@@ -274,8 +273,8 @@ ${trimmedCode}
       wrappedCode = isLikelyExpression && precedingLines
         ? `${precedingLines}\nreturn ${lastLine}`
         : isLikelyExpression
-        ? `return ${lastLine}`
-        : trimmedCode
+          ? `return ${lastLine}`
+          : trimmedCode
     }
 
     return `
