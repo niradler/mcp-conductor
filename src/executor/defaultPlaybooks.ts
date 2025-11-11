@@ -43,6 +43,7 @@ export async function ensureDefaultPlaybooks(rootDir: string): Promise<void> {
         continue
       }
     } catch {
+      // File doesn't exist, will install
     }
 
     try {

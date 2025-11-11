@@ -136,10 +136,11 @@ export class RunCode {
 
     const injectionCode = `
 // MCP Conductor - Injected Globals
-${this.mcpFactoryCode
+${
+      this.mcpFactoryCode
         ? `try {\n${this.mcpFactoryCode}\n} catch (e) {\n  console.error('Failed to initialize MCP factory:', e);\n}`
         : ''
-      }
+    }
 
 // Inject useful globals
 globalThis.WORKSPACE_DIR = ${workspacePath};
@@ -273,8 +274,8 @@ ${trimmedCode}
       wrappedCode = isLikelyExpression && precedingLines
         ? `${precedingLines}\nreturn ${lastLine}`
         : isLikelyExpression
-          ? `return ${lastLine}`
-          : trimmedCode
+        ? `return ${lastLine}`
+        : trimmedCode
     }
 
     return `
@@ -322,6 +323,7 @@ if (__mcpRunDenoResult !== undefined) {
       args.push('--config', denoJsonPath)
       log?.('debug', `Using config: ${denoJsonPath}`)
     } catch {
+      // No deno.json, continue without it
     }
 
     args.push(scriptPath)
@@ -468,6 +470,7 @@ if (__mcpRunDenoResult !== undefined) {
       const dir = dirname(path)
       await Deno.remove(dir, { recursive: true })
     } catch {
+      // Ignore cleanup errors
     }
   }
 }
