@@ -66,8 +66,16 @@
     "exclude": [
       "tests/",
       ".cursor/",
-      "examples/",
+      "examples/cursor-mcp-example.json",
+      "examples/claude-desktop-example.json",
+      "examples/docker-mcp-config.json",
+      "examples/DOCKER.md",
+      "examples/mcp-config-example.json",
+      "examples/*.ts",
       "coverage/"
+    ],
+    "include": [
+      "playbooks/"
     ]
   }
 }

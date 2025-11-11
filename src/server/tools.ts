@@ -222,6 +222,8 @@ export function registerPlaybookTools(server: McpServer, rootDir: string): void 
               playbooks.map((p) =>
                 `## ${p.name}\n**Folder:** ${p.folderName}\n**Description:** ${p.description}\n**Has Code:** ${
                   p.hasCode ? 'Yes' : 'No'
+                }\n**Source:** ${p.source || 'user'} ${
+                  p.source === 'system' ? '(default playbook)' : '(user-created)'
                 }\n`
               ).join('\n'),
         }],
@@ -293,6 +295,9 @@ export function registerPlaybookTools(server: McpServer, rootDir: string): void 
         author: z.string().optional().describe('Author name (optional)'),
         version: z.string().optional().describe('Version string (optional)'),
         tags: z.array(z.string()).optional().describe('Tags for categorization (optional)'),
+        source: z.enum(['system', 'user']).optional().describe(
+          'Source of playbook: "system" for default playbooks, "user" for custom ones (defaults to "user")',
+        ),
       },
     },
     async ({

@@ -146,6 +146,14 @@ export async function createServer(config: ServerConfig = {}): Promise<McpServer
   const playbooksDir = getPlaybooksDir(rootDir)
   console.error(`MCP Conductor playbooks: ${playbooksDir}`)
 
+  // Install default playbooks on first boot
+  try {
+    const { ensureDefaultPlaybooks } = await import('../executor/defaultPlaybooks.ts')
+    await ensureDefaultPlaybooks(rootDir)
+  } catch (error) {
+    console.error('Failed to install default playbooks:', error)
+  }
+
   await autoCacheWorkspacePackages(workspaceDir)
 
   const runCode = new RunCode(defaultRunArgs, workspaceDir, finalConfig.maxReturnSize)

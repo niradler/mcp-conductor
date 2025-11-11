@@ -4,6 +4,7 @@ export interface PlaybookMetadata {
   author?: string
   version?: string
   tags?: string[]
+  source?: 'system' | 'user' // Track if playbook is default or user-created
 }
 
 export interface PlaybookFile {
@@ -18,4 +19,5 @@ export interface PlaybookListItem {
   description: string
   folderName: string
   hasCode: boolean
+  source?: 'system' | 'user' // Track if playbook is default or user-created
 }

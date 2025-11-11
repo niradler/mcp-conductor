@@ -73,6 +73,7 @@ export async function listPlaybooks(rootDir: string): Promise<PlaybookListItem[]
           description: metadata.description,
           folderName: entry.name,
           hasCode,
+          source: metadata.source || 'user', // Default to 'user' if not specified
         })
       } catch (err) {
         console.error(`Failed to parse playbook ${entry.name}:`, err)
@@ -132,6 +133,9 @@ export async function createPlaybook(
     yamlFrontmatter.push('tags:')
     metadata.tags.forEach((tag) => yamlFrontmatter.push('  - ' + tag))
   }
+
+  // Add source field (defaults to 'user')
+  yamlFrontmatter.push('source: ' + (metadata.source || 'user'))
 
   const mdContent = `---\n${yamlFrontmatter.join('\n')}\n---\n\n${markdownContent}`
   const mdPath = `${folderPath}${sep}playbook.md`
