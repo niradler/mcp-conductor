@@ -82,7 +82,7 @@ export interface ServerConfig {
   defaultTimeout?: number
   maxTimeout?: number
   maxReturnSize?: number
-  returnMode?: 'json' | 'xml'
+  returnMode?: 'json' | 'yaml'
   workspaceDir?: string
   defaultRunArgs?: string[]
 }

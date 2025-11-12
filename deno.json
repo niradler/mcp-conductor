@@ -1,6 +1,6 @@
 {
   "name": "@conductor/mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Secure Deno code execution for AI agents via Model Context Protocol. Execute TypeScript/JavaScript in isolated, permission-controlled sandboxes.",
   "license": "MIT",
   "repository": {
@@ -64,10 +64,24 @@
   },
   "publish": {
     "exclude": [
-      "tests/",
       ".cursor/",
-      "examples/",
-      "coverage/"
+      "tests/",
+      "coverage/",
+      "examples/*.json",
+      "examples/*.md",
+      "examples/*.ts",
+      "scripts/",
+      "docker-compose.yml",
+      "Dockerfile",
+      ".git/",
+      ".gitignore"
+    ],
+    "include": [
+      "src/",
+      "playbooks/",
+      "README.md",
+      "LICENSE",
+      "deno.json"
     ]
   }
 }

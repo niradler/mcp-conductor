@@ -44,13 +44,15 @@
  * is the defense, not restricting code execution mechanisms.
  */
 
+import { join } from 'jsr:@std/path@^1'
 import type { ServerConfig } from '../types/types.ts'
 
-const DEFAULT_WORKSPACE = (Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '.') +
-  (Deno.build.os === 'windows' ? '\\' : '/') +
-  '.mcp-conductor' +
-  (Deno.build.os === 'windows' ? '\\' : '/') +
-  'workspace'
+const DEFAULT_ROOT_DIR = join(
+  Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '.',
+  '.mcp-conductor',
+)
+
+const DEFAULT_WORKSPACE = join(DEFAULT_ROOT_DIR, 'workspace')
 
 export const SECURE_DEFAULTS = {
   workspace: DEFAULT_WORKSPACE,
@@ -60,20 +62,20 @@ export const SECURE_DEFAULTS = {
   maxReturnSize: 262144,
 }
 
-function parseRunArgs(value?: string, workspaceDir?: string): string[] {
-  const workspace = workspaceDir || SECURE_DEFAULTS.workspace
+function parseRunArgs(value?: string, rootDir?: string): string[] {
+  const root = rootDir || DEFAULT_ROOT_DIR
 
   if (!value || value.trim() === '') {
     return [
       ...SECURE_DEFAULTS.runArgs,
-      `--allow-read=${workspace}`,
-      `--allow-write=${workspace}`,
+      `--allow-read=${root}`,
+      `--allow-write=${root}workspace`,
       '--allow-net=localhost',
     ]
   }
 
   const userArgs = value
-    .split(',')
+    .split(';')
     .map((arg) => {
       arg = arg.trim()
       if (!arg.startsWith('-')) {
@@ -108,7 +110,8 @@ function parseTimeout(value?: string, defaultValue?: number): number | undefined
 
 export function loadConfigFromEnv(): ServerConfig {
   const workspaceDir = Deno.env.get('MCP_CONDUCTOR_WORKSPACE') || SECURE_DEFAULTS.workspace
-  const runArgs = parseRunArgs(Deno.env.get('MCP_CONDUCTOR_RUN_ARGS'), workspaceDir)
+  const rootDir = workspaceDir.replace(/[\/\\]workspace[\/\\]?$/, '') || DEFAULT_ROOT_DIR
+  const runArgs = parseRunArgs(Deno.env.get('MCP_CONDUCTOR_RUN_ARGS'), rootDir)
   const defaultTimeout = parseTimeout(
     Deno.env.get('MCP_CONDUCTOR_DEFAULT_TIMEOUT'),
     SECURE_DEFAULTS.defaultTimeout,
@@ -123,6 +126,7 @@ export function loadConfigFromEnv(): ServerConfig {
   )
 
   console.error('=== MCP Conductor Configuration ===')
+  console.error(`Root dir: ${rootDir}`)
   console.error(`Workspace: ${workspaceDir}`)
   console.error(`Run args: ${runArgs.join(' ')}`)
   console.error(`Default timeout: ${defaultTimeout}ms`)
@@ -146,13 +150,12 @@ export const EXAMPLE_CONFIGS = {
   secure: {
     MCP_CONDUCTOR_WORKSPACE: '${HOME}/.mcp-conductor/workspace',
     MCP_CONDUCTOR_RUN_ARGS:
-      'allow-read=${HOME}/.mcp-conductor/workspace,allow-write=${HOME}/.mcp-conductor/workspace',
+      'allow-read=${HOME}/.mcp-conductor;allow-write=${HOME}/.mcp-conductor/workspace',
   },
 
   development: {
     MCP_CONDUCTOR_WORKSPACE: '/tmp/mcp-workspace',
-    MCP_CONDUCTOR_RUN_ARGS:
-      'allow-read=/tmp/mcp-workspace,allow-write=/tmp/mcp-workspace,allow-net',
+    MCP_CONDUCTOR_RUN_ARGS: 'allow-read=/tmp,/usr;allow-write=/tmp/mcp-workspace;allow-net',
     MCP_CONDUCTOR_DEFAULT_TIMEOUT: '30000',
   },
 

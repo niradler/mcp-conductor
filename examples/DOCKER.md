@@ -152,7 +152,7 @@ docker run -d \
 ### docker-compose.yml for Multi-Service
 
 ```yaml
-version: "3.8"
+version: '3.8'
 
 services:
   mcp-conductor:
@@ -170,9 +170,9 @@ services:
   mcp-conductor-http:
     image: mcp-conductor:latest
     container_name: mcp-conductor-http
-    command: ["http"]
+    command: ['http']
     ports:
-      - "3000:3000"
+      - '3000:3000'
     networks:
       - mcp-network
     volumes:
@@ -183,7 +183,7 @@ services:
       PORT: 3000
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -192,8 +192,8 @@ services:
     image: nginx:alpine
     container_name: mcp-nginx
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     networks:
       - mcp-network
     volumes:
@@ -222,7 +222,7 @@ name: Build and Push Docker Image
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 jobs:
   docker:
@@ -305,7 +305,7 @@ services:
   mcp-conductor:
     image: mcp-conductor:latest
     environment:
-      ENABLE_METRICS: "true"
+      ENABLE_METRICS: 'true'
       METRICS_PORT: 9090
 
   prometheus:
@@ -313,12 +313,12 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
-      - "9090:9090"
+      - '9090:9090'
 
   grafana:
     image: grafana/grafana
     ports:
-      - "3001:3000"
+      - '3001:3000'
     depends_on:
       - prometheus
 ```
@@ -382,14 +382,14 @@ docker exec mcp-conductor curl -f http://localhost:3000/health
      resources:
        limits:
          memory: 1G
-         cpus: "2.0"
+         cpus: '2.0'
    ```
 
 3. **Use health checks** for automatic recovery:
 
    ```yaml
    healthcheck:
-     test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+     test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
      interval: 30s
    ```
 
@@ -397,10 +397,10 @@ docker exec mcp-conductor curl -f http://localhost:3000/health
 
    ```yaml
    logging:
-     driver: "json-file"
+     driver: 'json-file'
      options:
-       max-size: "10m"
-       max-file: "3"
+       max-size: '10m'
+       max-file: '3'
    ```
 
 5. **Use secrets for sensitive data**:
@@ -464,4 +464,5 @@ docker stack rm mcp-stack
 
 ---
 
-For more information, see the main [README.md](../README.md) and [Security Documentation](../docs/SECURITY.md).
+For more information, see the main [README.md](../README.md) and
+[Security Documentation](../docs/SECURITY.md).

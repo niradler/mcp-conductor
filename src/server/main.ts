@@ -15,15 +15,16 @@ import type { LoggingLevel } from '@modelcontextprotocol/sdk/types.js'
 import { SetLevelRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
-import { asXml, RunCode } from '../executor/runCode.ts'
+import { asYaml, RunCode } from '../executor/runCode.ts'
 import type { ServerConfig } from '../types/types.ts'
 import { ensureWorkspaceDir } from '../executor/workspace.ts'
 import { loadConfigFromEnv } from './config.ts'
 import { MCPManager } from '../mcp-proxy/manager.ts'
 import { MCPRPCServer } from '../mcp-proxy/rpc-server.ts'
 import { generateMcpFactoryCode } from '../mcp-proxy/factory.ts'
-import { registerMCPProxyTools, registerRunDenoCodeTool } from './tools.ts'
+import { registerMCPProxyTools, registerPlaybookTools, registerRunDenoCodeTool } from './tools.ts'
 import { registerPrompts } from './prompts.ts'
+import { getPlaybooksDir } from '../executor/playbook.ts'
 
 const VERSION = '0.1.0'
 
@@ -136,10 +137,22 @@ export async function createServer(config: ServerConfig = {}): Promise<McpServer
     mcpFactoryCode = null
   }
 
-  const returnMode = finalConfig.returnMode ?? 'xml'
+  const returnMode = finalConfig.returnMode ?? 'json'
 
   const workspaceDir = await ensureWorkspaceDir(finalConfig.workspaceDir)
   console.error(`MCP Conductor workspace: ${workspaceDir}`)
+
+  const rootDir = workspaceDir.replace(/[\/\\]workspace[\/\\]?$/, '')
+  const playbooksDir = getPlaybooksDir(rootDir)
+  console.error(`MCP Conductor playbooks: ${playbooksDir}`)
+
+  // Install default playbooks on first boot
+  try {
+    const { ensureDefaultPlaybooks } = await import('../executor/defaultPlaybooks.ts')
+    await ensureDefaultPlaybooks(rootDir)
+  } catch (error) {
+    console.error('Failed to install default playbooks:', error)
+  }
 
   await autoCacheWorkspacePackages(workspaceDir)
 
@@ -148,6 +161,9 @@ export async function createServer(config: ServerConfig = {}): Promise<McpServer
   if (mcpFactoryCode) {
     runCode.setMcpFactoryCode(mcpFactoryCode)
   }
+
+  runCode.setPlaybooksDir(playbooksDir)
+  runCode.setRootDir(rootDir)
 
   if (defaultRunArgs.length > 0) {
     console.error(`Default run args: ${defaultRunArgs.join(' ')}`)
@@ -183,6 +199,8 @@ export async function createServer(config: ServerConfig = {}): Promise<McpServer
   if (mcpManager) {
     registerMCPProxyTools(server, mcpManager, returnMode)
   }
+
+  registerPlaybookTools(server, rootDir)
 
   registerPrompts(server)
 
@@ -340,7 +358,7 @@ result
   })
 
   console.error('\nExecution Result:')
-  console.error(await asXml(result, '/tmp'))
+  console.error(await asYaml(result, '/tmp'))
 
   if (result.status !== 'success') {
     Deno.exit(1)
