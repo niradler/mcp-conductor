@@ -1,4 +1,3 @@
-import type { ZodType } from "zod";
 import {
   JsonFileConfigStore,
   ProviderRegistry,
@@ -29,12 +28,9 @@ export interface MainResult {
 
 export async function main(configPath: string, options: MainOptions = {}): Promise<MainResult> {
   const log = options.logger ?? createLogger("server");
-  // Cast: `ZodType<T>` in core requires input === output, but our schema uses
-  // `.default()` on some fields (input allows undefined, output is concrete).
-  // The runtime parse always yields the output shape, so this cast is safe.
   const store = new JsonFileConfigStore<ConductorConfig>({
     path: configPath,
-    schema: ConductorConfigSchema as unknown as ZodType<ConductorConfig>,
+    schema: ConductorConfigSchema,
   });
   const config = await store.load();
 
