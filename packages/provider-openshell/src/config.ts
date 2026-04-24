@@ -2,13 +2,13 @@ import { z } from "zod";
 
 const PemSource = z.union([z.string().min(1), z.instanceof(Buffer)]);
 
-const TlsSchema = z.discriminatedUnion("mode", [
+export const TlsSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("insecure") }),
   z.object({ mode: z.literal("tls"), ca: PemSource }),
   z.object({ mode: z.literal("mtls"), ca: PemSource, cert: PemSource, key: PemSource }),
 ]);
 
-const TimeoutsSchema = z
+export const TimeoutsSchema = z
   .object({
     connect: z.number().int().positive().default(15_000),
     create: z.number().int().positive().default(120_000),
@@ -35,3 +35,5 @@ export const OpenShellProviderOptionsSchema = z
 
 export type OpenShellProviderOptions = z.infer<typeof OpenShellProviderOptionsSchema>;
 export type TlsOptions = z.infer<typeof TlsSchema>;
+export type TlsConfig = z.infer<typeof TlsSchema>;
+export type Timeouts = z.infer<typeof TimeoutsSchema>;
