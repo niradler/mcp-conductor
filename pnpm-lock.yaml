@@ -83,6 +83,28 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/server:
+    dependencies:
+      '@mcp-conductor/core':
+        specifier: workspace:*
+        version: link:../core
+      '@mcp-conductor/gateway':
+        specifier: workspace:*
+        version: link:../gateway
+      '@mcp-conductor/provider-mcp':
+        specifier: workspace:*
+        version: link:../provider-mcp
+      zod:
+        specifier: ^3.24.2
+        version: 3.25.76
+    devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.0.4
+        version: 1.29.0(zod@3.25.76)
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
+
 packages:
 
   '@esbuild/aix-ppc64@0.21.5':
