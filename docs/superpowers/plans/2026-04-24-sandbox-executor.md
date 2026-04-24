@@ -1,5 +1,7 @@
 # Sandbox Provider Implementation Plan
 
+**Status: SUPERSEDED** by `2026-04-24-provider-openshell.md`. The first sandbox provider pivoted from a Deno-subprocess + `spawn`-based shell executor to a gRPC client for the NVIDIA OpenShell gateway. This file is kept for history only — do not execute.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship `@mcp-conductor/provider-sandbox` — a pure-library package that implements `@mcp-conductor/core`'s `ToolProvider` interface and exposes two tools: `run_code` (scoped Deno-subprocess code execution) and `run_shell` (spawn-based shell execution without `sh -c`). The gateway consumes it like any other `ToolProvider`; it owns no HTTP surface.

@@ -16,7 +16,8 @@
     "typecheck": "pnpm -r --filter \"./packages/*\" run typecheck",
     "clean": "rimraf \"packages/*/dist\" \"packages/*/.tsbuildinfo\" coverage",
     "dev": "tsx packages/server/src/cli.ts",
-    "hash-key": "tsx scripts/hash-api-key.ts"
+    "hash-key": "tsx scripts/hash-api-key.ts",
+    "update-openshell-protos": "tsx scripts/update-openshell-protos.ts"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",
