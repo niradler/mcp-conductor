@@ -214,7 +214,7 @@ Note on `google/protobuf/struct.proto`: it's imported by `openshell.proto` but i
 
   `grpcurl` was **not** used: `openshell status -vv` is strictly stronger evidence (mTLS vs. `-insecure`), and the "do our vendored protos match the server surface?" question is validated end-to-end through `@grpc/proto-loader` in Tasks 1–10 (unit tests fail loudly on proto/service mismatch before any integration test runs). If `grpcurl` is later needed for ad-hoc debugging, install via `.deb` from <https://github.com/fullstorydev/grpcurl/releases> (Ubuntu 22.04 has no apt package) or `go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest`.
 
-- [ ] **Step 3:** Commit — `git add scripts/update-openshell-protos.ts package.json packages/provider-openshell/proto packages/provider-openshell/PROTO_VERSION.md docs/superpowers/plans/2026-04-24-provider-openshell.md && git commit -m "feat(provider-openshell): vendor OpenShell gRPC protos + update script"`
+- [x] **Step 3:** Committed in `21c4600` (also bundled SUPERSEDED banner on `2026-04-24-sandbox-executor.md` and cross-ref update in `2026-04-24-server.md`).
 
 ---
 
@@ -222,7 +222,7 @@ Note on `google/protobuf/struct.proto`: it's imported by `openshell.proto` but i
 
 **Files:** `packages/provider-openshell/{package.json,tsconfig.json,tsconfig.build.json,vitest.config.ts,src/index.ts}`
 
-- [ ] **Step 1:** `packages/provider-openshell/package.json`
+- [x] **Step 1:** `packages/provider-openshell/package.json`
 
 ```json
 {
@@ -252,7 +252,7 @@ Note on `google/protobuf/struct.proto`: it's imported by `openshell.proto` but i
 }
 ```
 
-- [ ] **Step 2:** `packages/provider-openshell/tsconfig.json`
+- [x] **Step 2:** `packages/provider-openshell/tsconfig.json`
 
 ```json
 {
@@ -262,7 +262,7 @@ Note on `google/protobuf/struct.proto`: it's imported by `openshell.proto` but i
 }
 ```
 
-- [ ] **Step 3:** `packages/provider-openshell/tsconfig.build.json`
+- [x] **Step 3:** `packages/provider-openshell/tsconfig.build.json`
 
 ```json
 {
@@ -272,7 +272,7 @@ Note on `google/protobuf/struct.proto`: it's imported by `openshell.proto` but i
 }
 ```
 
-- [ ] **Step 4:** `packages/provider-openshell/vitest.config.ts`
+- [x] **Step 4:** `packages/provider-openshell/vitest.config.ts`
 
 ```typescript
 import { defineConfig } from "vitest/config";
@@ -291,15 +291,15 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 5:** `packages/provider-openshell/src/index.ts` placeholder:
+- [x] **Step 5:** `packages/provider-openshell/src/index.ts` placeholder:
 
 ```typescript
 export const VERSION = "0.1.0";
 ```
 
-- [ ] **Step 6:** `pnpm install` from repo root. Verify package appears in `pnpm -r list` output.
+- [x] **Step 6:** `pnpm install` from repo root — `+1` workspace project added, all 6 resolve clean. `pnpm -F @mcp-conductor/provider-openshell typecheck` passes; `build` emits `dist/index.{js,d.ts,js.map,d.ts.map}`.
 
-- [ ] **Step 7:** Commit — `git add packages/provider-openshell pnpm-lock.yaml && git commit -m "feat(provider-openshell): package skeleton"`
+- [x] **Step 7:** Commit — see commit below.
 
 ---
 

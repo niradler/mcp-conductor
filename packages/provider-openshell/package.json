@@ -1,0 +1,30 @@
+{
+  "name": "@mcp-conductor/provider-openshell",
+  "version": "0.1.0",
+  "description": "ToolProvider for NVIDIA OpenShell — sandbox lifecycle, exec, and policy via the OpenShell gRPC gateway",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "proto", "README.md", "PROTO_VERSION.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@mcp-conductor/core": "workspace:*"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.11.0",
+    "@grpc/proto-loader": "^0.7.13",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@mcp-conductor/core": "workspace:*"
+  }
+}
