@@ -6,6 +6,7 @@ coverage/
 .env
 .env.local
 /data/
+/.local-tls/
 .vscode/
 .idea/
 .DS_Store

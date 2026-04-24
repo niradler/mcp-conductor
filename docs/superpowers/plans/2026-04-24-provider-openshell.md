@@ -305,11 +305,13 @@ export const VERSION = "0.1.0";
 
 ## Task 2: Credentials Builder
 
-Maps our three-mode config to `grpc.ChannelCredentials`. Pure function, easy to unit-test with real cert material.
+Maps our three-mode config to `grpc.ChannelCredentials`. Pure function.
 
 **Files:** `packages/provider-openshell/src/credentials.ts`, `packages/provider-openshell/tests/credentials.test.ts`
 
-- [ ] **Step 1:** Failing tests
+> **Revised approach (vs. initial draft):** no checked-in PEM fixtures. `grpc.credentials.createSsl` does not validate PEM at construction time (BoringSSL parses them only on connect), so real chain-signed certs would buy the unit test nothing. We `vi.spyOn(grpc.credentials, "createSsl")` to assert argument shape, use inline PEM-shaped strings for Buffer-branch coverage, and write one tmpfile in a single test (cleaned up in a try/finally) for the filesystem-path branch. Real crypto is the integration suite's job, not this unit's. Any openssl-generated material for ad-hoc debugging goes into the gitignored `/.local-tls/` directory, never `tests/fixtures/`.
+
+- [x] **Step 1:** Failing tests
 
 ```typescript
 import { describe, test, expect } from "vitest";
@@ -353,9 +355,9 @@ describe("buildChannelCredentials", () => {
 });
 ```
 
-Generate the three PEM fixtures under `tests/fixtures/` once (self-signed test material) — document with a README in that folder. Check in the generated files; they're test-only.
+~~Generate the three PEM fixtures under `tests/fixtures/` once~~ — superseded by the revised approach above. No PEM fixtures are checked in; tests use `vi.spyOn` + inline PEM-shaped strings + a single tmpfile-per-test for the path branch.
 
-- [ ] **Step 2:** Impl
+- [x] **Step 2:** Impl
 
 ```typescript
 import { readFileSync } from "node:fs";
@@ -383,9 +385,9 @@ export function buildChannelCredentials(tls: TlsOptions): grpc.ChannelCredential
 }
 ```
 
-- [ ] **Step 3:** Run tests → green.
+- [x] **Step 3:** Run tests → 9/9 green in 10ms (`pnpm -F @mcp-conductor/provider-openshell exec vitest run`). Typecheck + build pass.
 
-- [ ] **Step 4:** Commit.
+- [x] **Step 4:** Commit — see commit below.
 
 ---
 
