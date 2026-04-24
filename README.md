@@ -29,24 +29,23 @@ pnpm typecheck
 
 ## Quick start
 
-1. Generate a hash for your API key:
+`examples/conductor.json` ships with user `alice` whose API key is `changeme` (hash baked in) and one provider that runs `@modelcontextprotocol/server-everything` over `npx`. Enough to see real tools end-to-end without any config edits:
 
-   ```bash
-   pnpm hash-key my-secret-key
-   # sha256:...
-   ```
+```bash
+CONDUCTOR_CONFIG=examples/conductor.json pnpm dev
+# listens on 127.0.0.1:3000, exposes 13 tools as everything__*
+```
 
-2. Copy `examples/conductor.json` to the repo root (or any path) and paste the hash into `users[].apiKeyHash`.
-3. Start the gateway pointing at your config:
+Connect any MCP client to `http://127.0.0.1:3000/mcp` with `Authorization: Bearer changeme`.
 
-   ```bash
-   CONDUCTOR_CONFIG=examples/conductor.json pnpm dev
-   ```
+### Using your own API key
 
-   The gateway listens on the `server.host`/`server.port` from the config (default `0.0.0.0:3000`).
-4. Connect any MCP client to `http://localhost:3000/mcp` with header `Authorization: Bearer my-secret-key`.
+```bash
+pnpm hash-key my-secret-key
+# sha256:...
+```
 
-The bundled example config spawns `@modelcontextprotocol/server-everything` over `npx` so you can see real tools end-to-end without writing your own upstream.
+Copy `examples/conductor.json` to your own path, replace the `apiKeyHash` with the output above, and point `CONDUCTOR_CONFIG` at it.
 
 ## Environment variables
 
