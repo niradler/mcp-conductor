@@ -4,6 +4,17 @@ import { ProviderError, createLogger } from "@mcp-conductor/core";
 import type { ToolCallResult, ToolContent, ToolSpec } from "@mcp-conductor/core";
 import type { McpProviderOptions } from "./config.js";
 
+function mapMcpContent(raw: unknown): ToolContent[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item): ToolContent => {
+    if (!item || typeof item !== "object") return { type: "text", text: String(item) };
+    const c = item as Record<string, unknown>;
+    if (c["type"] === "text") return { type: "text", text: String(c["text"] ?? "") };
+    if (typeof c["type"] === "string") return c as ToolContent;
+    return { type: "json", json: item };
+  });
+}
+
 export class UpstreamClient {
   private readonly log = createLogger("provider-mcp");
   private readonly opts: McpProviderOptions;
@@ -108,7 +119,7 @@ export class UpstreamClient {
     const res = await this.withTimeout(call, this.opts.callTimeoutMs, `call ${name}`, signal);
     return {
       isError: res.isError as boolean | undefined,
-      content: ((res.content as ToolContent[] | undefined) ?? []),
+      content: mapMcpContent(res.content),
     };
   }
 

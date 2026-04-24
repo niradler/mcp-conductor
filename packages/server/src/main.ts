@@ -34,6 +34,14 @@ export async function main(configPath: string, options: MainOptions = {}): Promi
   });
   const config = await store.load();
 
+  if (process.env.PORT) {
+    const p = Number(process.env.PORT);
+    if (!Number.isInteger(p) || p < 0 || p > 65535) {
+      throw new Error(`invalid PORT env var: ${process.env.PORT}`);
+    }
+    config.server.port = p;
+  }
+
   initTelemetry(config.telemetry.serviceName);
 
   const registry = new ProviderRegistry();

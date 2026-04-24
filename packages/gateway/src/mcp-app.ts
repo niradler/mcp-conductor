@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
+import { isInitializeRequest, type ContentBlock } from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
@@ -79,9 +79,10 @@ export function exportMcpApp(deps: ExportMcpAppDeps): ExportedMcpApp {
               signal,
             });
             return {
-              content: result.content.map((c) => {
-                if (c.type === "text") return { type: "text" as const, text: c.text };
-                return { type: "text" as const, text: JSON.stringify(c.json) };
+              content: result.content.map((c): ContentBlock => {
+                if (c.type === "text") return { type: "text", text: c.text };
+                if (c.type === "json") return { type: "text", text: JSON.stringify(c.json) };
+                return c as unknown as ContentBlock;
               }),
               isError: result.isError,
             };
@@ -101,8 +102,10 @@ export function exportMcpApp(deps: ExportMcpAppDeps): ExportedMcpApp {
     const shape: Record<string, z.ZodType> = {};
     const props = schema?.["properties"];
     if (props && typeof props === "object") {
-      for (const key of Object.keys(props as Record<string, unknown>)) {
-        shape[key] = z.unknown();
+      for (const [key, value] of Object.entries(props as Record<string, unknown>)) {
+        const prop = value as Record<string, unknown>;
+        const desc = typeof prop?.["description"] === "string" ? prop["description"] : undefined;
+        shape[key] = desc ? z.unknown().describe(desc) : z.unknown();
       }
     }
     return shape;

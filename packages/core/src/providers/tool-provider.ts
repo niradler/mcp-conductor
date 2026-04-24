@@ -19,7 +19,11 @@ export interface ToolCallContext {
 
 export type ToolContent =
   | { type: "text"; text: string }
-  | { type: "json"; json: unknown };
+  | { type: "json"; json: unknown }
+  | { type: "image"; data: string; mimeType: string; [k: string]: unknown }
+  | { type: "audio"; data: string; mimeType: string; [k: string]: unknown }
+  | { type: "resource_link"; name: string; uri: string; [k: string]: unknown }
+  | { type: "resource"; resource: { uri: string; text: string; [k: string]: unknown } | { uri: string; blob: string; [k: string]: unknown }; [k: string]: unknown };
 
 export interface ToolCallResult {
   isError?: boolean;

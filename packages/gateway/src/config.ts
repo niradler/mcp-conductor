@@ -15,7 +15,7 @@ export const GroupSchema = z.object({
 
 export const ServerSchema = z.object({
   host: z.string().default("0.0.0.0"),
-  port: z.number().int().nonnegative().default(3000),
+  port: z.number().int().nonnegative().default(18080),
   maxSessions: z.number().int().positive().default(100),
 }).default({});
 
