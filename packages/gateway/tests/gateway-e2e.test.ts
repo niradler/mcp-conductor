@@ -96,6 +96,27 @@ describe("gateway e2e", () => {
     expect(body.error?.code).toBe("not_found");
   });
 
+  test("each tool call gets its own audit requestId", async () => {
+    const transport = new StreamableHTTPClientTransport(new URL(`${gw.address}/mcp`), {
+      requestInit: { headers: { Authorization: "Bearer alice-key" } },
+    });
+    const client = new Client({ name: "e2e-rid", version: "0.0.1" }, { capabilities: {} });
+    await client.connect(transport);
+
+    const before = (await store.queryCalls()).length;
+    await client.callTool({ name: "stub__echo", arguments: { text: "one" } });
+    await client.callTool({ name: "stub__echo", arguments: { text: "two" } });
+    await client.close();
+
+    const rows = await store.queryCalls();
+    const added = rows.slice(before);
+    expect(added).toHaveLength(2);
+    const [a, b] = added;
+    expect(a!.requestId).toBeTruthy();
+    expect(b!.requestId).toBeTruthy();
+    expect(a!.requestId).not.toBe(b!.requestId);
+  }, 30_000);
+
   test("oversized request body returns 413 with structured body", async () => {
     // maxArgSizeBytes is set to 256 in the test config; 1KB of payload should trip it.
     const oversized = "x".repeat(1024);
