@@ -3,7 +3,7 @@ import type {
   ToolCallResult,
   ToolProvider,
   ToolSpec,
-} from "@conductor/core";
+} from "@mcp-conductor/core";
 import { McpProviderOptionsSchema, type McpProviderOptions } from "./config.js";
 import { UpstreamClient } from "./upstream-client.js";
 

@@ -2,7 +2,7 @@ import { createServer, type Server as HttpServer } from "node:http";
 import {
   createLogger, createShutdownRegistry,
   type AuditStore, type ProviderRegistry, type Logger,
-} from "@conductor/core";
+} from "@mcp-conductor/core";
 import { exportMcpApp, type ExportedMcpApp } from "./mcp-app.js";
 import { GatewayErrorCode, writeErrorResponse } from "./errors.js";
 import type { GatewayConfig } from "./config.js";

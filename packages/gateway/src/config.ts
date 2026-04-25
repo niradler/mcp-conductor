@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ConfigError } from "@conductor/core";
+import { ConfigError } from "@mcp-conductor/core";
 
 export const UserSchema = z.object({
   name: z.string().min(1),

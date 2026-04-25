@@ -89,7 +89,7 @@ These three items fix visible gaps that affect every agent talking to the gatewa
 
 ## Stage 2.5 — Provider Type Expansion
 
-Today the only provider type is `mcp` (stdio upstream). To match the surface area of `api-spec-cli` (`C:\Projects\spec-cli`) — which lets agents call OpenAPI, GraphQL, and MCP endpoints — the gateway needs to grow new provider variants. Each variant slots into the existing discriminated union in `packages/server/src/conductor-config.ts` (`ProviderEntrySchema`) and ships as its own `@conductor/provider-*` package implementing `ToolProvider`.
+Today the only provider type is `mcp` (stdio upstream). To match the surface area of `api-spec-cli` (`C:\Projects\spec-cli`) — which lets agents call OpenAPI, GraphQL, and MCP endpoints — the gateway needs to grow new provider variants. Each variant slots into the existing discriminated union in `packages/server/src/conductor-config.ts` (`ProviderEntrySchema`) and ships as its own `@mcp-conductor/provider-*` package implementing `ToolProvider`.
 
 The spec-cli surface to mirror:
 
@@ -109,7 +109,7 @@ Translating to `conductor.json` provider entries.
 
 **Work:**
 
-- New package `@conductor/provider-openapi` exporting `OpenApiProvider implements ToolProvider`.
+- New package `@mcp-conductor/provider-openapi` exporting `OpenApiProvider implements ToolProvider`.
 - Config:
 
   ```json
@@ -139,7 +139,7 @@ Translating to `conductor.json` provider entries.
 
 **Work:**
 
-- New package `@conductor/provider-graphql` exporting `GraphqlProvider implements ToolProvider`.
+- New package `@mcp-conductor/provider-graphql` exporting `GraphqlProvider implements ToolProvider`.
 - Config:
 
   ```json

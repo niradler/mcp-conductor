@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
-import { hashApiKey } from "@conductor/gateway";
+import { hashApiKey } from "@mcp-conductor/gateway";
 import { main, type MainResult } from "../src/main.js";
 
 const here = dirname(fileURLToPath(import.meta.url));

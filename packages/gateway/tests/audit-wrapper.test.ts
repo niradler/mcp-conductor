@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from "vitest";
-import { ConsoleAuditStore } from "@conductor/core";
-import type { ToolProvider } from "@conductor/core";
+import { ConsoleAuditStore } from "@mcp-conductor/core";
+import type { ToolProvider } from "@mcp-conductor/core";
 import { auditedProvider } from "../src/audit-wrapper.js";
 
 const inner: ToolProvider = {

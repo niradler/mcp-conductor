@@ -6,8 +6,8 @@ import {
   shutdownTelemetry,
   type AuditStore,
   type Logger,
-} from "@conductor/core";
-import { startGateway, type StartGatewayResult } from "@conductor/gateway";
+} from "@mcp-conductor/core";
+import { startGateway, type StartGatewayResult } from "@mcp-conductor/gateway";
 import { ConductorConfigSchema, type ConductorConfig } from "./conductor-config.js";
 import { createAuditStore } from "./audit-factory.js";
 import { createProvider } from "./provider-factory.js";

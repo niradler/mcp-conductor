@@ -1,5 +1,5 @@
-import type { ToolProvider } from "@conductor/core";
-import { McpProvider } from "@conductor/provider-mcp";
+import type { ToolProvider } from "@mcp-conductor/core";
+import { McpProvider } from "@mcp-conductor/provider-mcp";
 import type { ProviderEntry } from "./conductor-config.js";
 import { filteredProvider } from "./filtered-provider.js";
 

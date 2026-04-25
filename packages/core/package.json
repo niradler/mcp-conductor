@@ -1,5 +1,5 @@
 {
-  "name": "@conductor/core",
+  "name": "@mcp-conductor/core",
   "version": "0.2.0",
   "description": "Foundation: ToolProvider interface, data-access stores, logger, OTel, lifecycle",
   "type": "module",

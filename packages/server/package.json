@@ -1,5 +1,5 @@
 {
-  "name": "@conductor/server",
+  "name": "@mcp-conductor/server",
   "version": "0.2.0",
   "description": "conductor CLI binary: loads conductor.json, wires gateway + providers",
   "type": "module",
@@ -21,9 +21,9 @@
     "dev": "tsx src/cli.ts"
   },
   "dependencies": {
-    "@conductor/core": "workspace:*",
-    "@conductor/gateway": "workspace:*",
-    "@conductor/provider-mcp": "workspace:*",
+    "@mcp-conductor/core": "workspace:*",
+    "@mcp-conductor/gateway": "workspace:*",
+    "@mcp-conductor/provider-mcp": "workspace:*",
     "zod": "^3.24.2"
   },
   "devDependencies": {

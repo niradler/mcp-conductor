@@ -63,10 +63,10 @@ importers:
         specifier: ^3.24.2
         version: 3.25.76
     devDependencies:
-      '@conductor/core':
+      '@mcp-conductor/core':
         specifier: workspace:*
         version: link:../core
-      '@conductor/provider-mcp':
+      '@mcp-conductor/provider-mcp':
         specifier: workspace:*
         version: link:../provider-mcp
 
@@ -79,7 +79,7 @@ importers:
         specifier: ^3.24.2
         version: 3.25.76
     devDependencies:
-      '@conductor/core':
+      '@mcp-conductor/core':
         specifier: workspace:*
         version: link:../core
 
@@ -95,19 +95,19 @@ importers:
         specifier: ^3.24.2
         version: 3.25.76
     devDependencies:
-      '@conductor/core':
+      '@mcp-conductor/core':
         specifier: workspace:*
         version: link:../core
 
   packages/server:
     dependencies:
-      '@conductor/core':
+      '@mcp-conductor/core':
         specifier: workspace:*
         version: link:../core
-      '@conductor/gateway':
+      '@mcp-conductor/gateway':
         specifier: workspace:*
         version: link:../gateway
-      '@conductor/provider-mcp':
+      '@mcp-conductor/provider-mcp':
         specifier: workspace:*
         version: link:../provider-mcp
       zod:

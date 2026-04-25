@@ -25,7 +25,7 @@ The script verifies the commit on GitHub, downloads the three proto files from
 this file. After any update run:
 
 ```bash
-pnpm -F @conductor/provider-openshell test
+pnpm -F @mcp-conductor/provider-openshell test
 ```
 
 Any breakage is a signal that upstream changed a message shape we depend on —

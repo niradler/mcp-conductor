@@ -1,6 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { delimiter, isAbsolute, join, resolve } from "node:path";
-import { hashApiKey } from "@conductor/gateway";
+import { hashApiKey } from "@mcp-conductor/gateway";
 import { ConductorConfigSchema, type ConductorConfig } from "./conductor-config.js";
 
 export interface ValidationResult {

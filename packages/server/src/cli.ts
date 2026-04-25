@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { createLogger } from "@conductor/core";
+import { createLogger } from "@mcp-conductor/core";
 import { main } from "./main.js";
 import { formatValidationResult, validateConfigFile } from "./validate.js";
 

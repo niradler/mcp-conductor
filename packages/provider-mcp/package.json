@@ -1,5 +1,5 @@
 {
-  "name": "@conductor/provider-mcp",
+  "name": "@mcp-conductor/provider-mcp",
   "version": "0.2.0",
   "description": "ToolProvider implementation that connects to an upstream MCP server",
   "type": "module",
@@ -17,13 +17,13 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@conductor/core": "workspace:*"
+    "@mcp-conductor/core": "workspace:*"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@conductor/core": "workspace:*"
+    "@mcp-conductor/core": "workspace:*"
   }
 }

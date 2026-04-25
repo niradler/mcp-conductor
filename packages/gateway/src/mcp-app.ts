@@ -8,7 +8,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   AuthError, createLogger,
   type AuditStore, type ProviderRegistry, type ToolProvider, type Logger,
-} from "@conductor/core";
+} from "@mcp-conductor/core";
 import { extractBearer, verifyApiKey } from "./auth.js";
 import { validateGatewayConfig, type GatewayConfig, type GatewayUser } from "./config.js";
 import { providersForUser } from "./access-control.js";

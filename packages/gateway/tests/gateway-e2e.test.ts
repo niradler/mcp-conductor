@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { ConsoleAuditStore, ProviderRegistry } from "@conductor/core";
-import { McpProvider } from "@conductor/provider-mcp";
+import { ConsoleAuditStore, ProviderRegistry } from "@mcp-conductor/core";
+import { McpProvider } from "@mcp-conductor/provider-mcp";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { startGateway, type StartGatewayResult } from "../src/server.js";

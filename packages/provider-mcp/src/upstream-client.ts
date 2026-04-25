@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { ProviderError, createLogger } from "@conductor/core";
-import type { ToolCallResult, ToolContent, ToolSpec } from "@conductor/core";
+import { ProviderError, createLogger } from "@mcp-conductor/core";
+import type { ToolCallResult, ToolContent, ToolSpec } from "@mcp-conductor/core";
 import type { McpProviderOptions } from "./config.js";
 
 function mapMcpContent(raw: unknown): ToolContent[] {

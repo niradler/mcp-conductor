@@ -1,7 +1,7 @@
 import {
   getTracer, redactArgs,
   type AuditStore, type ToolCallContext, type ToolCallResult, type ToolProvider,
-} from "@conductor/core";
+} from "@mcp-conductor/core";
 import { SpanStatusCode } from "@opentelemetry/api";
 
 export interface AuditWrapperOptions {

@@ -1,6 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import * as grpc from "@grpc/grpc-js";
-import type { ToolCallContext } from "@conductor/core";
+import type { ToolCallContext } from "@mcp-conductor/core";
 import { OpenShellProviderOptionsSchema, type OpenShellProviderOptions } from "../src/config.js";
 import * as policySet from "../src/tools/policy-set.js";
 import * as policyStatus from "../src/tools/policy-status.js";

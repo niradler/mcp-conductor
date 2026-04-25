@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { GatewayConfigSchema } from "@conductor/gateway";
+import { GatewayConfigSchema } from "@mcp-conductor/gateway";
 
 export const McpProviderEntrySchema = z.object({
   type: z.literal("mcp"),

@@ -138,11 +138,11 @@ A single JSON file, validated by Zod at load time. Schema lives at [`packages/se
 
 | Package                                                            | Role                                                                                                                                   |
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@conductor/core`](packages/core)                                 | `ToolProvider` interface, `ProviderRegistry`, audit & config stores, logger, OTel bootstrap, shutdown registry. No sibling deps.       |
-| [`@conductor/provider-mcp`](packages/provider-mcp)                 | `ToolProvider` that spawns an upstream MCP server over stdio. Handles timeouts and reconnect.                                          |
-| [`@conductor/provider-openshell`](packages/provider-openshell)     | `ToolProvider` for [NVIDIA OpenShell](docs/) (gRPC). Protos vendored; regenerate with `pnpm update-openshell-protos`. _Currently a stub._ |
-| [`@conductor/gateway`](packages/gateway)                           | The HTTP MCP server. Auth, groups, audit wrapping, namespacing, session manager. Accepts any `ToolProvider[]`.                         |
-| [`@conductor/server`](packages/server)                             | The CLI (`conductor`). Loads `conductor.json`, wires providers into the gateway, owns signals.                                         |
+| [`@mcp-conductor/core`](packages/core)                                 | `ToolProvider` interface, `ProviderRegistry`, audit & config stores, logger, OTel bootstrap, shutdown registry. No sibling deps.       |
+| [`@mcp-conductor/provider-mcp`](packages/provider-mcp)                 | `ToolProvider` that spawns an upstream MCP server over stdio. Handles timeouts and reconnect.                                          |
+| [`@mcp-conductor/provider-openshell`](packages/provider-openshell)     | `ToolProvider` for [NVIDIA OpenShell](docs/) (gRPC). Protos vendored; regenerate with `pnpm update-openshell-protos`. _Currently a stub._ |
+| [`@mcp-conductor/gateway`](packages/gateway)                           | The HTTP MCP server. Auth, groups, audit wrapping, namespacing, session manager. Accepts any `ToolProvider[]`.                         |
+| [`@mcp-conductor/server`](packages/server)                             | The CLI (`conductor`). Loads `conductor.json`, wires providers into the gateway, owns signals.                                         |
 
 ### Request lifecycle
 
@@ -173,7 +173,7 @@ docs/
 
 ## Writing a provider
 
-Implement `ToolProvider` from `@conductor/core`:
+Implement `ToolProvider` from `@mcp-conductor/core`:
 
 ```ts
 import type {
@@ -181,7 +181,7 @@ import type {
   ToolSpec,
   ToolCallContext,
   ToolCallResult,
-} from "@conductor/core";
+} from "@mcp-conductor/core";
 
 export class MyProvider implements ToolProvider {
   readonly name = "my-provider";

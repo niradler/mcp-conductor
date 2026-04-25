@@ -1,4 +1,4 @@
-import { ConsoleAuditStore, type AuditStore } from "@conductor/core";
+import { ConsoleAuditStore, type AuditStore } from "@mcp-conductor/core";
 import type { AuditConfig } from "./conductor-config.js";
 
 export function createAuditStore(cfg: AuditConfig): AuditStore {

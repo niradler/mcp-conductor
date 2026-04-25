@@ -1,4 +1,4 @@
-import type { ToolProvider } from "@conductor/core";
+import type { ToolProvider } from "@mcp-conductor/core";
 
 export interface FilterOptions {
   allowTools?: string[];

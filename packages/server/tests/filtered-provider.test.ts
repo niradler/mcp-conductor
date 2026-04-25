@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import type { ToolProvider, ToolSpec } from "@conductor/core";
+import type { ToolProvider, ToolSpec } from "@mcp-conductor/core";
 import { filteredProvider } from "../src/filtered-provider.js";
 
 function makeStub(tools: ToolSpec[]): ToolProvider {
