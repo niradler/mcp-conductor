@@ -2,8 +2,9 @@ import { createServer, type Server as HttpServer } from "node:http";
 import {
   createLogger, createShutdownRegistry,
   type AuditStore, type ProviderRegistry, type Logger,
-} from "@mcp-conductor/core";
+} from "@conductor/core";
 import { exportMcpApp, type ExportedMcpApp } from "./mcp-app.js";
+import { GatewayErrorCode, writeErrorResponse } from "./errors.js";
 import type { GatewayConfig } from "./config.js";
 
 export interface StartGatewayOptions {
@@ -13,6 +14,8 @@ export interface StartGatewayOptions {
   logger?: Logger;
   /** If true, bind SIGINT/SIGTERM to graceful shutdown. Default true. */
   manageSignals?: boolean;
+  /** Optional per-provider audit redaction. Returns extra arg keys to replace with [REDACTED]. */
+  redactKeysForProvider?: (providerName: string) => string[];
 }
 
 export interface StartGatewayResult {
@@ -29,6 +32,7 @@ export async function startGateway(opts: StartGatewayOptions): Promise<StartGate
     registry: opts.registry,
     auditStore: opts.auditStore,
     logger: log,
+    ...(opts.redactKeysForProvider ? { redactKeysForProvider: opts.redactKeysForProvider } : {}),
   });
 
   const server = createServer(async (req, res) => {
@@ -53,13 +57,7 @@ export async function startGateway(opts: StartGatewayOptions): Promise<StartGate
       res.end(Buffer.from(body));
     } catch (err) {
       log.error("request handler failed", { err });
-      if (!res.headersSent) {
-        res.statusCode = 500;
-        res.setHeader("Content-Type", "application/json");
-      }
-      if (!res.writableEnded) {
-        res.end(JSON.stringify({ error: "internal error" }));
-      }
+      writeErrorResponse(res, 500, GatewayErrorCode.InternalError, "internal error");
     }
   });
 

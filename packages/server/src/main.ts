@@ -6,8 +6,8 @@ import {
   shutdownTelemetry,
   type AuditStore,
   type Logger,
-} from "@mcp-conductor/core";
-import { startGateway, type StartGatewayResult } from "@mcp-conductor/gateway";
+} from "@conductor/core";
+import { startGateway, type StartGatewayResult } from "@conductor/gateway";
 import { ConductorConfigSchema, type ConductorConfig } from "./conductor-config.js";
 import { createAuditStore } from "./audit-factory.js";
 import { createProvider } from "./provider-factory.js";
@@ -50,14 +50,22 @@ export async function main(configPath: string, options: MainOptions = {}): Promi
 
   const auditStore = createAuditStore(config.audit);
 
+  const redactByProvider = new Map<string, string[]>();
+  for (const entry of config.providers) {
+    if (entry.redact_fields && entry.redact_fields.length > 0) {
+      redactByProvider.set(entry.name, entry.redact_fields);
+    }
+  }
+
   const gateway = await startGateway({
     config,
     registry,
     auditStore,
     logger: log,
     manageSignals: options.manageSignals ?? false,
+    redactKeysForProvider: (name) => redactByProvider.get(name) ?? [],
   });
-  log.info("mcp-conductor ready", { address: gateway.address, providers: registry.names() });
+  log.info("conductor ready", { address: gateway.address, providers: registry.names() });
 
   return {
     config,

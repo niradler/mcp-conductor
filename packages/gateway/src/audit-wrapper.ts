@@ -1,7 +1,7 @@
 import {
   getTracer, redactArgs,
   type AuditStore, type ToolCallContext, type ToolCallResult, type ToolProvider,
-} from "@mcp-conductor/core";
+} from "@conductor/core";
 import { SpanStatusCode } from "@opentelemetry/api";
 
 export interface AuditWrapperOptions {
@@ -11,7 +11,7 @@ export interface AuditWrapperOptions {
 }
 
 export function auditedProvider(inner: ToolProvider, options: AuditWrapperOptions): ToolProvider {
-  const tracer = getTracer("mcp-conductor.gateway");
+  const tracer = getTracer("conductor.gateway");
   return {
     name: inner.name,
     connect: () => inner.connect(),

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ConfigError } from "@mcp-conductor/core";
+import { ConfigError } from "@conductor/core";
 
 export const UserSchema = z.object({
   name: z.string().min(1),
@@ -17,6 +17,10 @@ export const ServerSchema = z.object({
   host: z.string().default("0.0.0.0"),
   port: z.number().int().nonnegative().default(18080),
   maxSessions: z.number().int().positive().default(100),
+  /** Maximum HTTP request body size in bytes. Requests with Content-Length above this are rejected with 413. */
+  maxArgSizeBytes: z.number().int().positive().default(1_048_576),
+  /** Per-session HTTP request budget per minute (0 disables). When exceeded the gateway returns 429. */
+  maxCallsPerMinute: z.number().int().nonnegative().default(0),
 }).default({});
 
 export const GatewayConfigSchema = z.object({

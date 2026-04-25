@@ -1,0 +1,37 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 18080,
+    "maxSessions": 50
+  },
+  "users": [
+    {
+      "name": "alice",
+      "apiKeyHash": "sha256:dc5db55c36a6222e71acc1e20580729e526eba3a610d923f2869d0c55f3bd030",
+      "groups": ["all"]
+    }
+  ],
+  "groups": [
+    {
+      "name": "all",
+      "providers": ["*"]
+    }
+  ],
+  "providers": [
+    {
+      "type": "mcp",
+      "name": "everything",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-everything"],
+      "env": {}
+    }
+  ],
+  "audit": {
+    "type": "console"
+  },
+  "telemetry": {
+    "serviceName": "mcp-conductor",
+    "otlpEndpoint": ""
+  }
+}

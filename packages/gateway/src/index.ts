@@ -7,3 +7,6 @@ export type { GatewayConfig, GatewayUser, GatewayGroup } from "./config.js";
 export { hashApiKey, verifyApiKey, extractBearer } from "./auth.js";
 export { encodeToolName, decodeToolName } from "./namespace.js";
 export { auditedProvider } from "./audit-wrapper.js";
+export { GatewayErrorCode, buildGatewayError, writeErrorResponse } from "./errors.js";
+export type { GatewayErrorCodeValue, GatewayErrorBody } from "./errors.js";
+export { RateLimiter } from "./rate-limit.js";

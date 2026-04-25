@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
-import { hashApiKey } from "@mcp-conductor/gateway";
+import { hashApiKey } from "@conductor/gateway";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
@@ -39,7 +39,7 @@ describe("e2e CLI", () => {
   beforeAll(async () => {
     if (!existsSync(CLI)) {
       throw new Error(
-        `dist/cli.js missing at ${CLI}. Run "pnpm -F @mcp-conductor/server build" before vitest.`,
+        `dist/cli.js missing at ${CLI}. Run "pnpm -F @conductor/server build" before vitest.`,
       );
     }
     writeFileSync(

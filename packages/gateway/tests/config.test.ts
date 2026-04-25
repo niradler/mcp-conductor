@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { GatewayConfigSchema, validateGatewayConfig } from "../src/config.js";
-import { ConfigError } from "@mcp-conductor/core";
+import { ConfigError } from "@conductor/core";
 
 const base = {
   server: { port: 3000 },

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { GatewayConfigSchema } from "@mcp-conductor/gateway";
+import { GatewayConfigSchema } from "@conductor/gateway";
 
 export const McpProviderEntrySchema = z.object({
   type: z.literal("mcp"),
@@ -17,6 +17,12 @@ export const McpProviderEntrySchema = z.object({
       maxDelayMs: z.number().int().positive().optional(),
     })
     .optional(),
+  /** Only expose tools whose names match one of these exact names or glob patterns (e.g. "sandbox_*"). */
+  allow_tools: z.array(z.string()).optional(),
+  /** Always hide tools whose names match one of these patterns. Applied after allow_tools. */
+  exclude_tools: z.array(z.string()).optional(),
+  /** Tool argument keys whose values are replaced with [REDACTED] in audit records (in addition to the built-in sensitive-key list). */
+  redact_fields: z.array(z.string()).optional(),
 });
 
 /**
@@ -33,7 +39,7 @@ export const AuditConfigSchema = z.object({
 
 export const TelemetryConfigSchema = z
   .object({
-    serviceName: z.string().default("mcp-conductor"),
+    serviceName: z.string().default("conductor"),
     otlpEndpoint: z.string().default(""),
   })
   .default({});

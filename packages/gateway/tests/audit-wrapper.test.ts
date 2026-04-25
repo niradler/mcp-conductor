@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from "vitest";
-import { ConsoleAuditStore } from "@mcp-conductor/core";
-import type { ToolProvider } from "@mcp-conductor/core";
+import { ConsoleAuditStore } from "@conductor/core";
+import type { ToolProvider } from "@conductor/core";
 import { auditedProvider } from "../src/audit-wrapper.js";
 
 const inner: ToolProvider = {
@@ -35,6 +35,23 @@ describe("audit-wrapper", () => {
     const rows = await store.queryCalls();
     expect(rows[0]).toMatchObject({ tool: "boom", status: "error" });
     expect(rows[0]!.error).toContain("upstream-boom");
+  });
+
+  test("redactExtraKeys redacts non-sensitive-named fields", async () => {
+    const wrapped = auditedProvider(inner, { store, redactExtraKeys: ["repo_url", "tenant_id"] });
+    await wrapped.callTool(
+      "echo",
+      { repo_url: "https://example.com/x", tenant_id: "T-42", harmless: "ok" },
+      { user: "alice", requestId: "rq2" },
+    );
+    const rows = await store.queryCalls();
+    expect(rows).toHaveLength(1);
+    const args = rows[0]!.args;
+    expect(args).not.toContain("https://example.com/x");
+    expect(args).not.toContain("T-42");
+    expect(args).toContain("[REDACTED]");
+    expect(args).toContain("harmless");
+    expect(args).toContain("ok");
   });
 
   test("records an error row when result.isError=true", async () => {
