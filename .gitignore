@@ -1,47 +1,15 @@
-# Ignore Deno's cache and output
-.deno/
 node_modules/
-
-# Coverage reports
+**/dist/
+**/.tsbuildinfo
 coverage/
-.coverage
-
-# Build outputs
-dist/
-build/
-
-# Environment variables
+*.log
 .env
 .env.local
-.env.*.local
-
-# IDE specific files
+/data/
+/.local-tls/
+/.tmp/
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-
-# OS specific files
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Lock files (optional - include if you want reproducible builds)
-# deno.lock
-
-# Docker
-.docker/
-docker-compose.override.yml
-*.env.docker
-
-# Workspace (user data)
-workspace/
+.claude

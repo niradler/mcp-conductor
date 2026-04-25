@@ -1,0 +1,33 @@
+{
+  "name": "@mcp-conductor/server",
+  "version": "0.2.0",
+  "description": "conductor CLI binary: loads conductor.json, wires gateway + providers",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "conductor": "bin/conductor.js"
+  },
+  "files": ["dist", "bin", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@mcp-conductor/core": "workspace:*",
+    "@mcp-conductor/gateway": "workspace:*",
+    "@mcp-conductor/provider-mcp": "workspace:*",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "tsx": "^4.19.2"
+  }
+}
