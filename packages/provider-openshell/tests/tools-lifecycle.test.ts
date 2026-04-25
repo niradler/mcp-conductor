@@ -1,6 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import * as grpc from "@grpc/grpc-js";
-import type { ToolCallContext } from "@mcp-conductor/core";
+import type { ToolCallContext } from "@conductor/core";
 import { OpenShellProviderOptionsSchema, type OpenShellProviderOptions } from "../src/config.js";
 import * as sandboxCreate from "../src/tools/sandbox-create.js";
 import * as sandboxGet from "../src/tools/sandbox-get.js";

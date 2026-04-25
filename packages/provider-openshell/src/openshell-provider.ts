@@ -1,10 +1,10 @@
-import { ProviderError } from "@mcp-conductor/core";
+import { ProviderError } from "@conductor/core";
 import type {
   ToolCallContext,
   ToolCallResult,
   ToolProvider,
   ToolSpec,
-} from "@mcp-conductor/core";
+} from "@conductor/core";
 import type { z } from "zod";
 import { OpenShellProviderOptionsSchema, type OpenShellProviderOptions } from "./config.js";
 

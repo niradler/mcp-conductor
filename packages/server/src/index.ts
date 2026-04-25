@@ -16,3 +16,5 @@ export type {
 } from "./conductor-config.js";
 export { createAuditStore } from "./audit-factory.js";
 export { createProvider } from "./provider-factory.js";
+export { validateConfigFile, formatValidationResult } from "./validate.js";
+export type { ValidationResult } from "./validate.js";

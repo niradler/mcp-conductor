@@ -7,7 +7,7 @@ import { trace, metrics, type Tracer, type Meter } from "@opentelemetry/api";
 let initialized = false;
 let sdk: NodeSDK | null = null;
 
-export function initTelemetry(serviceName = "mcp-conductor", serviceVersion = "0.2.0"): void {
+export function initTelemetry(serviceName = "conductor", serviceVersion = "0.2.0"): void {
   if (initialized) return;
   initialized = true;
   const url = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;

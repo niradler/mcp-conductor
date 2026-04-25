@@ -1,6 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
-import { ProviderError } from "@mcp-conductor/core";
-import type { ToolCallContext } from "@mcp-conductor/core";
+import { ProviderError } from "@conductor/core";
+import type { ToolCallContext } from "@conductor/core";
 import { OpenShellProvider } from "../src/openshell-provider.js";
 import type { OpenShellClient } from "../src/openshell-client.js";
 

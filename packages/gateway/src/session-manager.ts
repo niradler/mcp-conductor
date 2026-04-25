@@ -1,4 +1,4 @@
-import type { Logger } from "@mcp-conductor/core";
+import type { Logger } from "@conductor/core";
 
 export interface Session<Mcp, Tr> {
   id: string;

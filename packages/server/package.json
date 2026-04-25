@@ -1,7 +1,7 @@
 {
-  "name": "@mcp-conductor/server",
+  "name": "@conductor/server",
   "version": "0.2.0",
-  "description": "mcp-conductor CLI binary: loads conductor.json, wires gateway + providers",
+  "description": "conductor CLI binary: loads conductor.json, wires gateway + providers",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,7 @@
     }
   },
   "bin": {
-    "mcp-conductor": "bin/mcp-conductor.js"
+    "conductor": "bin/conductor.js"
   },
   "files": ["dist", "bin", "README.md"],
   "scripts": {
@@ -21,9 +21,9 @@
     "dev": "tsx src/cli.ts"
   },
   "dependencies": {
-    "@mcp-conductor/core": "workspace:*",
-    "@mcp-conductor/gateway": "workspace:*",
-    "@mcp-conductor/provider-mcp": "workspace:*",
+    "@conductor/core": "workspace:*",
+    "@conductor/gateway": "workspace:*",
+    "@conductor/provider-mcp": "workspace:*",
     "zod": "^3.24.2"
   },
   "devDependencies": {

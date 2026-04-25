@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ToolCallContext, ToolCallResult } from "@mcp-conductor/core";
+import type { ToolCallContext, ToolCallResult } from "@conductor/core";
 import type { OpenShellClient } from "../openshell-client.js";
 import type { OpenShellProviderOptions } from "../config.js";
 import { SandboxPolicySchema } from "../types.js";

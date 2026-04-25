@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { ProviderError, createLogger } from "@mcp-conductor/core";
-import type { ToolCallResult, ToolContent, ToolSpec } from "@mcp-conductor/core";
+import { ProviderError, createLogger } from "@conductor/core";
+import type { ToolCallResult, ToolContent, ToolSpec } from "@conductor/core";
 import type { McpProviderOptions } from "./config.js";
 
 function mapMcpContent(raw: unknown): ToolContent[] {
@@ -36,7 +36,7 @@ export class UpstreamClient {
       env: { ...process.env, ...this.opts.env } as Record<string, string>,
     });
     this.client = new Client(
-      { name: `mcp-conductor/${this.opts.name}`, version: "0.2.0" },
+      { name: `conductor/${this.opts.name}`, version: "0.2.0" },
       { capabilities: {} },
     );
     await this.withTimeout(

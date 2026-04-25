@@ -1,4 +1,4 @@
-import type { ToolSpec } from "@mcp-conductor/core";
+import type { ToolSpec } from "@conductor/core";
 
 export const SANDBOX_CREATE: ToolSpec = {
   name: "sandbox_create",

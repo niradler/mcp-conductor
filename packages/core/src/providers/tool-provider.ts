@@ -32,7 +32,7 @@ export interface ToolCallResult {
 
 /**
  * A source of tools. Implementations:
- *  - `@mcp-conductor/provider-mcp`    — stdio/SSE MCP upstream
+ *  - `@conductor/provider-mcp`    — stdio/SSE MCP upstream
  *  - future: OpenAPI, GraphQL, HTTP, sandbox, ...
  */
 export interface ToolProvider {

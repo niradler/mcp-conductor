@@ -1,5 +1,5 @@
 {
-  "name": "@mcp-conductor/gateway",
+  "name": "@conductor/gateway",
   "version": "0.2.0",
   "description": "HTTP MCP gateway: auth, group access, audit, consumes any ToolProvider[]",
   "type": "module",
@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@mcp-conductor/core": "workspace:*"
+    "@conductor/core": "workspace:*"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
@@ -27,7 +27,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@mcp-conductor/core": "workspace:*",
-    "@mcp-conductor/provider-mcp": "workspace:*"
+    "@conductor/core": "workspace:*",
+    "@conductor/provider-mcp": "workspace:*"
   }
 }

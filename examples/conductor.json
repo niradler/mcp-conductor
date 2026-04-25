@@ -38,7 +38,7 @@
     "type": "console"
   },
   "telemetry": {
-    "serviceName": "mcp-conductor",
+    "serviceName": "conductor",
     "otlpEndpoint": ""
   }
 }

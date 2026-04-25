@@ -1,5 +1,5 @@
 import * as grpc from "@grpc/grpc-js";
-import type { ToolCallResult } from "@mcp-conductor/core";
+import type { ToolCallResult } from "@conductor/core";
 
 export function textResult(text: string): ToolCallResult {
   return { content: [{ type: "text", text }] };

@@ -1,10 +1,11 @@
-import type { ToolProvider } from "@mcp-conductor/core";
-import { McpProvider } from "@mcp-conductor/provider-mcp";
+import type { ToolProvider } from "@conductor/core";
+import { McpProvider } from "@conductor/provider-mcp";
 import type { ProviderEntry } from "./conductor-config.js";
+import { filteredProvider } from "./filtered-provider.js";
 
 export function createProvider(entry: ProviderEntry): ToolProvider {
   if (entry.type === "mcp") {
-    return new McpProvider({
+    const raw = new McpProvider({
       name: entry.name,
       transport: entry.transport,
       command: entry.command,
@@ -18,6 +19,7 @@ export function createProvider(entry: ProviderEntry): ToolProvider {
         maxDelayMs: entry.reconnect?.maxDelayMs ?? 30_000,
       },
     });
+    return filteredProvider(raw, { allowTools: entry.allow_tools, excludeTools: entry.exclude_tools });
   }
   // Exhaustiveness guard — Zod ensures only known `type`s reach here.
   throw new Error(`unknown provider type: ${(entry as { type: string }).type}`);

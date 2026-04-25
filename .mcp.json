@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "mcp-conductor": {
+    "conductor": {
       "type": "http",
       "url": "http://127.0.0.1:18080/mcp",
       "headers": {

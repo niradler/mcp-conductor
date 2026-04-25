@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project summary
 
-mcp-conductor is a tool gateway for AI agents. It speaks MCP to clients and aggregates tools from multiple backends (`ToolProvider` implementations) behind bearer-token auth, group-based access control, and full audit. Packaged as a pnpm workspace.
+conductor is a tool gateway for AI agents. It speaks MCP to clients and aggregates tools from multiple backends (`ToolProvider` implementations) behind bearer-token auth, group-based access control, and full audit. Packaged as a pnpm workspace.
 
 ## Commands
 
@@ -48,11 +48,11 @@ Five packages in `packages/*`, strict layering — core has no sibling deps; gat
 
 | Package                             | Role                                                                                                                                                                                                                                                                                                                 |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@mcp-conductor/core`               | Foundation. Exports `ToolProvider` interface, `ProviderRegistry`, `AuditStore` + `ConsoleAuditStore`, `JsonFileConfigStore`, `createLogger`, OTel bootstrap (`initTelemetry`/`shutdownTelemetry`), `createShutdownRegistry`, shared `Result`/`Timed` types, error classes. Subpath exports: `./data`, `./providers`. |
-| `@mcp-conductor/provider-mcp`       | `ToolProvider` that spawns an upstream MCP server over stdio and proxies `list`/`call` with timeouts and reconnect.                                                                                                                                                                                                  |
-| `@mcp-conductor/provider-openshell` | `ToolProvider` for NVIDIA OpenShell (gRPC). Ships vendored protos under `proto/`; regenerate with `pnpm update-openshell-protos`. Currently a stub.                                                                                                                                                                  |
-| `@mcp-conductor/gateway`            | The HTTP MCP server. Consumes any `ToolProvider[]` via a `ProviderRegistry`. Exports `startGateway()` and the lower-level `exportMcpApp()`. Not tied to any specific provider.                                                                                                                                       |
-| `@mcp-conductor/server`             | CLI binary `mcp-conductor`. Loads `conductor.json`, builds providers via `provider-factory.ts`, wires the gateway. `src/main.ts` is the programmatic entry; `src/cli.ts` is the executable.                                                                                                                          |
+| `@conductor/core`               | Foundation. Exports `ToolProvider` interface, `ProviderRegistry`, `AuditStore` + `ConsoleAuditStore`, `JsonFileConfigStore`, `createLogger`, OTel bootstrap (`initTelemetry`/`shutdownTelemetry`), `createShutdownRegistry`, shared `Result`/`Timed` types, error classes. Subpath exports: `./data`, `./providers`. |
+| `@conductor/provider-mcp`       | `ToolProvider` that spawns an upstream MCP server over stdio and proxies `list`/`call` with timeouts and reconnect.                                                                                                                                                                                                  |
+| `@conductor/provider-openshell` | `ToolProvider` for NVIDIA OpenShell (gRPC). Ships vendored protos under `proto/`; regenerate with `pnpm update-openshell-protos`. Currently a stub.                                                                                                                                                                  |
+| `@conductor/gateway`            | The HTTP MCP server. Consumes any `ToolProvider[]` via a `ProviderRegistry`. Exports `startGateway()` and the lower-level `exportMcpApp()`. Not tied to any specific provider.                                                                                                                                       |
+| `@conductor/server`             | CLI binary `conductor`. Loads `conductor.json`, builds providers via `provider-factory.ts`, wires the gateway. `src/main.ts` is the programmatic entry; `src/cli.ts` is the executable.                                                                                                                          |
 
 ### Request flow
 
