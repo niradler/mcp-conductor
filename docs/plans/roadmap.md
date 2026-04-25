@@ -61,11 +61,13 @@ These three items fix visible gaps that affect every agent talking to the gatewa
 
 ## Stage 2 — Developer Experience
 
-### 2.1 Per-request audit requestId (priority: medium)
+### ~~2.1 Per-request audit requestId~~ ✅ DONE (2026-04-26)
 
-**Problem:** All tool calls in a session share the `requestId` from the `initialize` POST. Audit entries can't be correlated to individual HTTP requests.
+**Problem:** All tool calls in a session shared the `requestId` from the `initialize` POST. Audit entries couldn't be correlated to individual HTTP requests.
 
-**Work:** Thread HTTP request ID from each `tools/call` POST into tool handler via transport `extra` object. Update `buildMcpServer` handler to read `extra.requestId` per call.
+**Implementation:** `mcp-app.ts` `handleRequest` now re-injects the per-request `X-Request-Id` (incoming or generated) back onto `req.headers` before delegating to the MCP transport. The MCP SDK's `StreamableHTTPServerTransport` exposes the request headers via `extra.requestInfo.headers` to tool handlers; the gateway's tool handler reads `x-request-id` from there per call, falling back to the closure-captured initialize-time id only if absent. Audit rows now carry distinct `requestId`s for each tool call within a session.
+
+**Test:** `gateway-e2e.test.ts` "each tool call gets its own audit requestId" — connects one client, makes two `stub__echo` calls, asserts the two appended audit rows have distinct, truthy `requestId`s.
 
 ### 2.2 Resource proxying (`resources/read`) (priority: medium)
 
@@ -333,6 +335,7 @@ Security is first-class, not an afterthought. Items below are ordered by risk im
 - `StartGatewayOptions.redactKeysForProvider?: (name) => string[]` and `ExportMcpAppDeps.redactKeysForProvider` callback. Plumbed in `gateway/src/server.ts` and `mcp-app.ts`; the wrap loop forwards `redactExtraKeys` to `auditedProvider` per provider when the callback returns a non-empty list.
 - `server/main.ts` builds a `Map<string, string[]>` from config entries and passes the lookup callback to `startGateway`.
 - Test coverage: new unit test in `packages/gateway/tests/audit-wrapper.test.ts` ("redactExtraKeys redacts non-sensitive-named fields") verifies that non-sensitive-named arg keys (e.g. `repo_url`, `tenant_id`) are redacted in the persisted audit row.
+- Constraint: end-to-end demos against MCP servers whose tool schemas declare `additionalProperties: false` (e.g. the `everything` server) won't reach the redactor — the upstream rejects the extra field before the call lands. To exercise `redact_fields` end-to-end, point at a provider whose tool accepts the field as part of its schema.
 - Deferred to a future change: structured audit output to file/SIEM (separate work — `audit.type: "console"` is the only sink today).
 
 ### S5 — Mutual TLS / certificate-pinned upstream connections (priority: medium, stage 4)

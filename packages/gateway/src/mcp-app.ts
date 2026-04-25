@@ -15,7 +15,7 @@ import { providersForUser } from "./access-control.js";
 import { encodeToolName, decodeToolName } from "./namespace.js";
 import { auditedProvider } from "./audit-wrapper.js";
 import { SessionManager } from "./session-manager.js";
-import { getRequestIdFromRawHeaders, requestIdMiddleware } from "./request-id.js";
+import { getRequestIdFromRawHeaders, requestIdMiddleware, REQUEST_ID_HEADER } from "./request-id.js";
 import { GatewayErrorCode, buildGatewayError, writeErrorResponse } from "./errors.js";
 import { RateLimiter } from "./rate-limit.js";
 
@@ -218,11 +218,16 @@ export function exportMcpApp(deps: ExportMcpAppDeps): ExportedMcpApp {
             if (!decoded) throw new Error(`bad tool name: ${fullName}`);
             const inner = wrapped.get(decoded.provider);
             if (!inner) throw new Error(`provider vanished: ${decoded.provider}`);
-            const signal = (extra as { signal?: AbortSignal } | undefined)?.signal;
+            const e = extra as
+              | { signal?: AbortSignal; requestInfo?: { headers?: Record<string, string | string[] | undefined> } }
+              | undefined;
+            const headerId = e?.requestInfo?.headers?.[REQUEST_ID_HEADER.toLowerCase()];
+            const callRequestId =
+              (Array.isArray(headerId) ? headerId[0] : headerId) ?? requestId;
             const result = await inner.callTool(decoded.tool, args, {
               user: user.name,
-              requestId,
-              signal,
+              requestId: callRequestId,
+              signal: e?.signal,
             });
             return {
               content: result.content.map((c): ContentBlock => {
@@ -260,7 +265,10 @@ export function exportMcpApp(deps: ExportMcpAppDeps): ExportedMcpApp {
   async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
     if (!req.url?.startsWith("/mcp")) return false;
     const requestId = getRequestIdFromRawHeaders(req.headers as Record<string, string | string[] | undefined>);
-    res.setHeader("X-Request-Id", requestId);
+    res.setHeader(REQUEST_ID_HEADER, requestId);
+    // Re-inject the (possibly generated) id into the request headers so the
+    // MCP transport surfaces it via `extra.requestInfo.headers` to tool handlers.
+    req.headers[REQUEST_ID_HEADER.toLowerCase()] = requestId;
 
     // Reject oversized payloads before authenticating — keeps DoS payloads cheap.
     const declaredLength = Number(req.headers["content-length"] ?? 0);
