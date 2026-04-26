@@ -175,10 +175,23 @@ export function exportMcpApp(deps: ExportMcpAppDeps): ExportedMcpApp {
     server.registerTool(
       "conductor__list_providers",
       {
-        description: "List all MCP provider names accessible to the current user.",
+        description:
+          "List all MCP providers accessible to the current user with their advertised descriptions, instructions, and tool counts.",
         inputSchema: {},
       },
-      async () => ({ content: [{ type: "text" as const, text: JSON.stringify(allowed) }] }),
+      async () => {
+        const summary = allowed.map((providerName) => {
+          const provider = wrapped.get(providerName);
+          const tools = providerTools.get(providerName);
+          return {
+            name: providerName,
+            ...(provider?.description ? { description: provider.description } : {}),
+            ...(provider?.instructions ? { instructions: provider.instructions } : {}),
+            toolCount: tools?.length ?? 0,
+          };
+        });
+        return { content: [{ type: "text" as const, text: JSON.stringify(summary) }] };
+      },
     );
 
     server.registerTool(

@@ -9,6 +9,8 @@ import { UpstreamClient } from "./upstream-client.js";
 
 export class McpProvider implements ToolProvider {
   readonly name: string;
+  description?: string;
+  instructions?: string;
   private readonly client: UpstreamClient;
 
   constructor(options: unknown) {
@@ -19,6 +21,8 @@ export class McpProvider implements ToolProvider {
 
   async connect(): Promise<void> {
     await this.client.connect();
+    this.description = this.client.getDescription();
+    this.instructions = this.client.getInstructions();
   }
 
   async close(): Promise<void> {

@@ -3,6 +3,18 @@
 Competitive reference: fiberplane/mcp-gateway, agentic-community/mcp-gateway-registry, AWS AgentCore Gateway.
 Each stage is independently shippable. Stages are ordered by impact-to-effort ratio.
 
+## Framing
+
+Conductor sits in front of N upstream tool sources as one MCP endpoint. The thesis the rest of this roadmap is built on: **the LLM's context window is the bottleneck, and the gateway is the right place to defend it.** Connecting MCPs directly to an agent pre-loads every tool's schema into context before a request arrives, degrading model accuracy past ~100K tokens ("Lost in the Middle"). Conductor's answer is layered:
+
+1. **Group-based access control** — only the caller's allowed providers are advertised.
+2. **Lazy meta-tools** (Stage 1.3 — done) — `conductor__list_providers` / `conductor__list_tools` let agents *enumerate* on demand instead of all-at-once.
+3. **Provider descriptions + instructions** (Stage 1.4) — capture what each upstream advertises so meta-tools and search return *meaning*, not just names.
+4. **Semantic tool search** (Stage 4.4) — `conductor__search_tools(intent)` returns the top-N tools across *all* upstreams in one call, pre-filtered by hybrid lexical + embedding match.
+5. **Virtual MCP servers per role** (Stage 4.5) — one endpoint per persona that already aggregates the right slice of tools.
+
+Comparison vs. Anthropic's April-2026 Claude Code Tool Search: Claude Code does *lazy* tool search inside the agent loop (in-process, per session). Conductor does *proactive pre-filtering* outside the agent loop (infrastructure layer, before the LLM ever sees the tools). Same problem, different layer — both are valid; conductor's wins are governance, audit, and one filter that benefits every agent in the org.
+
 ---
 
 ## Stage 1 — Core Correctness (current sprint)
@@ -40,6 +52,22 @@ These three items fix visible gaps that affect every agent talking to the gatewa
 - Add tests in `packages/gateway/tests/` using the stub provider
 
 **Done when:** Config with `allow_tools: ["echo"]` on the stub provider exposes only `stub__echo`; `exclude_tools: ["echo"]` hides it.
+
+---
+
+### ~~1.4 Provider descriptions + instructions surfaced from upstream~~ ✅ DONE (2026-04-26)
+
+**Problem:** `conductor__list_providers` returned `string[]` (names only). The `ToolProvider` interface had no `description` field. Agents calling `list_providers` couldn't tell providers apart without doing a follow-up `list_tools` per provider, and Stage 4.4 (semantic search) had nothing meaningful to embed at the provider level.
+
+**Implementation:**
+
+- `ToolProvider` (`packages/core/src/providers/tool-provider.ts`) gained optional `description?` and `instructions?` fields, populated after `connect()`.
+- `provider-mcp` reads them from the upstream MCP server: `client.getServerVersion()?.description` (the `serverInfo.description` field on `Implementation`) and `client.getInstructions()` (the `initialize.instructions` field). No new config fields — the upstream is the source of truth.
+- `conductor__list_providers` return shape upgraded from `string[]` to `[{ name, description?, instructions?, toolCount }]`.
+- The audit wrapper forwards both as getters so the values stay live if the inner provider reconnects.
+- E2E test asserts the new shape end-to-end against the stub MCP server.
+
+**Real-world finding:** The official `@modelcontextprotocol/server-everything` MCP server doesn't set `serverInfo.description` but ships a multi-paragraph `instructions` block. **`instructions` is the substantive field for semantic search to embed**, not `description` — many real upstreams skip the latter. Stage 4.4's index design needs to weight `instructions` accordingly.
 
 ---
 
@@ -284,12 +312,61 @@ Translating to `conductor.json` provider entries.
 
 ### 4.4 Semantic tool search / discovery (priority: medium)
 
-**Problem:** With many providers, agents can't efficiently find the right tool without seeing all 100+.
+**Problem:** With many providers, agents can't efficiently find the right tool without seeing all 100+. Lazy meta-tools (Stage 1.3) help with *enumeration* but still force the agent to drill provider-by-provider. The article framing: *the gateway should pre-filter tools by intent before they ever reach the LLM*.
+
+**Position vs Anthropic's April-2026 Tool Search:** Claude Code does in-loop lazy search inside the agent. Conductor does out-of-loop pre-filter at the infrastructure layer — the agent calls one meta-tool with intent and gets the top-N tools across *all* upstreams. Same problem, different layer; both ship.
+
+**v1 — keyword `search_tools` (small, ship first):**
+
+- `conductor__search_tools(query: string, limit?: number)` meta-tool.
+- Lexical scoring over tool `name` + `description` + `inputSchema` field names. BM25-style or simple TF-IDF.
+- Filtered to providers the caller can see (reuses `providersForUser`).
+- Returns `[{ provider, name, description, score }]` sorted desc.
+
+**v2 — hybrid lexical + embeddings (the real win):**
+
+- Pre-indexed at boot: on each provider's `connect()`, embed `name + description + instructions + per-tool description + per-tool param names` and store an in-memory vector index. Re-embed on reconnect.
+- Hybrid score = α·lexical + (1−α)·cosine(query, tool). Tunable α (default 0.5).
+- Local embedding model via `@xenova/transformers` (e.g., `all-MiniLM-L6-v2`) — no external API calls, no per-request cost. Model loaded lazily in a worker.
+- Optional pluggable embedder interface so operators can swap to a hosted model (OpenAI, Voyage) via config.
+- **Provider-level signal: weight `instructions` heavily.** Real-world finding from Stage 1.4: most upstreams skip `serverInfo.description` but ship rich `instructions` blocks (the `everything` server is the canonical example).
+
+**v3 — virtual servers consume the index** (becomes Stage 4.5; see below).
+
+**KPIs (must measure or it's a guess):**
+
+| Metric                  | Target                                                                                              | Source                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Tool Selection Accuracy | (right tool / total search calls) — track when caller subsequently calls a tool from the result set | audit log + new `searchId` correlation field |
+| Token Efficiency        | bytes returned by `search_tools` vs bytes a full `list_tools` would emit                            | computed at search time                      |
+| Retrieval Latency       | p50/p95/p99 ms added before the LLM call                                                            | OTel span on the search handler              |
+
+Publish as `/metrics` (Prometheus) and surface in the admin dashboard.
+
+### 4.5 Virtual MCP servers per role (priority: medium)
+
+**Problem:** Even with semantic search, advertising "all 200 tools" via one endpoint is wasteful when a Support agent only ever needs Confluence + Jira + Slack. Today the only way to slice tools by persona is per-user `groups` — but every persona still hits `/mcp` and gets every allowed tool listed.
 
 **Work:**
-- `conductor__search_tools(query: string)` meta-tool — fuzzy-matches tool names + descriptions
-- Optional: embed descriptions with a local model (e.g., `@xenova/transformers`) for vector search
-- For v1: simple keyword/substring match is sufficient
+
+- New endpoint shape: `/mcp/virtual/<name>` where `<name>` is a config-defined role (e.g. `devops`, `support`).
+- Config gains `virtualServers[]`:
+
+  ```json
+  {
+    "virtualServers": [
+      { "name": "devops",  "providers": ["github", "jira", "sonarqube"], "tools": ["github__create_issue", "jira__*"] },
+      { "name": "support", "providers": ["confluence", "jira", "slack"] }
+    ]
+  }
+  ```
+
+- Routing: `/mcp/virtual/<name>` resolves to a per-virtual `providersForUser` view = intersection(`user.groups`, `virtualServer.providers`). User still authenticates with their own bearer token.
+- Tool filter (optional `tools[]`): glob patterns over `provider__tool` names, applied after access control.
+- All session, audit, rate-limit, and meta-tool machinery is reused — virtual servers are a routing layer, not a new transport.
+- `conductor__list_providers` and `conductor__search_tools` both honor the virtual scope automatically.
+
+**Done when:** an agent connecting to `/mcp/virtual/devops` with a valid bearer sees only the devops slice of tools, while the same user connecting to `/mcp` sees their full group-allowed set.
 
 ---
 
@@ -363,6 +440,53 @@ See Stage 4.1. Key security properties:
 - Add `env_from_secret` field to provider config: `{ VAR_NAME: "vault://path/to/secret" }`.
 - Implement a `SecretResolver` interface with a Vault backend (HashiCorp Vault, AWS Secrets Manager via environment injection).
 
+### S8 — Per-tool / per-action rate limits + quotas (priority: high, stage 3)
+
+**Problem:** S1 added per-session minute-window rate limiting — useful, but coarse. The article makes the case for **per-action governance**: "user X deleted 5 wiki pages in the last hour, block the 6th." That's how you stop runaway agent loops *before* damage, not after. Today the gateway can't say "this agent has called `confluence__delete_page` more than 3 times this hour."
+
+**Work:**
+
+- Extend `RateLimiter` to support multi-dimensional buckets keyed by `(user, provider, tool)` *and* `(session, provider, tool)`.
+- Config:
+
+  ```json
+  {
+    "rateLimits": [
+      { "tool": "confluence__delete_page", "perUser": { "perHour": 3 } },
+      { "tool": "github__create_issue",   "perSession": { "perMinute": 10 } },
+      { "providerGlob": "jira__*",        "perUser": { "perDay": 500 } }
+    ]
+  }
+  ```
+
+- Match precedence: exact tool name → glob → default per-session limit (existing).
+- On exceed: 429 with structured body `{ error: { code: "rate_limited/per_tool", details: { tool, limit, window, retryAfterSec } } }`.
+- Audit each enforced denial with `status: "rate_limited"` so operators can see runaway agents in the audit log.
+- Fire an OTel event + optional webhook on threshold breach for "agent in deletion loop" alerts.
+
+**Done when:** an agent that calls a destructive tool faster than its per-tool budget gets hard-blocked at the gateway with no upstream call made; the audit log shows the denial; an operator alert fires.
+
+### S9 — Outbound JWT signing to upstream providers (priority: medium, stage 4)
+
+**Problem:** Upstream MCP servers today have no way to verify a call actually came through conductor. Anyone with the upstream's local socket / URL can call it directly, bypassing all gateway governance (auth, audit, rate limits, redaction). The article calls this out explicitly: "a call that arrives outside the gateway — doesn't pass."
+
+**Work:**
+
+- Gateway loads or generates an asymmetric signing keypair (Ed25519 or ES256). Public key published at `GET /.well-known/conductor-jwks.json`.
+- Per upstream call, conductor mints a short-lived JWT (TTL 60s) with claims:
+  - `iss`: gateway's `server.publicUrl`
+  - `sub`: caller user name
+  - `aud`: provider name
+  - `tool`: tool being called
+  - `request_id`, `iat`, `exp`, `jti`
+- JWT injected into the upstream call:
+  - HTTP/SSE/Streamable-HTTP MCP providers → `Authorization: Bearer <jwt>` (or custom header).
+  - Stdio MCP providers → environment variable `CONDUCTOR_CALL_JWT` set on the spawned process for the duration of the call (revisit — stdio is per-process not per-call, so this likely lands as an `_meta` field on the MCP `tools/call` request once the SDK supports it).
+- New shared library `@mcp-conductor/upstream-verify` exporting an Express/Hono middleware and a low-level verifier so upstream MCP authors can drop one line into their server to enforce gateway-only access.
+- Reuses the same JWT primitives as future Stage 4.1 OIDC ingress.
+
+**Done when:** a sample upstream MCP server using `upstream-verify` rejects any call whose JWT isn't signed by conductor's published JWKS; calls through conductor pass; direct calls are 401.
+
 ---
 
 ## Developer Experience (DevEx) Roadmap
@@ -415,6 +539,20 @@ Validate a `conductor.json` file offline (without starting the server): parse co
 
 Regression test in `packages/server/tests/validate.test.ts` runs the validator against all shipped examples.
 
+### D8 — Manifest-driven provider onboarding (priority: medium, stage 3)
+
+**Problem:** Today every team adds an MCP by editing `conductor.json` directly. There's no PR-able manifest format, no normalization step, no "platform team approves before it goes live" gate. The article makes a strong case: a registry only delivers governance value if there's a *workflow* in front of it. Without that, semantic search has nothing to search and RBAC has nothing to enforce against.
+
+**Work:**
+
+- Define a per-provider manifest format (`providers/<name>.yaml`) with the same fields as a `conductor.json` provider entry plus metadata: `owner`, `description`, `tags`, `pii_classification`, `default_groups`.
+- New CLI: `conductor manifest validate <dir>` — schema check, command-on-PATH check, attempts a one-shot `connect()` + `listTools()` against the upstream and snapshots tool names + schemas.
+- New CLI: `conductor manifest compile <dir> -o conductor.json` — merges `providers/*.yaml` into a single `conductor.json` (or a partial `providers[]` array for inclusion).
+- Reference GitHub Actions workflow under `.github/workflows/example-provider-onboarding.yml` showing the platform-team pattern: PR adds `providers/<name>.yaml` → CI validates + snapshot-diffs against last merged version → owner-codeowner enforces approval → merge auto-deploys via `conductor manifest compile`.
+- Optional: same compile step embeds tool descriptions and pre-builds the Stage 4.4 vector index, persisted as `conductor.index.bin`. Boot reads the index instead of re-embedding every restart.
+
+**Done when:** a developer can open a PR with a single YAML file and have a new provider live in conductor after platform-team approval, without anyone hand-editing `conductor.json`.
+
 ---
 
 ## Stage 5 — Advanced / Ecosystem
@@ -439,21 +577,26 @@ Run multiple versions of the same upstream MCP server behind one provider name. 
 
 ## Competitive gap summary (as of 2026-04-25)
 
-| Capability | conductor | Fiberplane | Agentic |
-|---|---|---|---|
-| Multi-provider aggregation | ✅ | ✅ | ✅ |
-| Bearer token auth | ✅ | ✅ | ✅ |
-| Group-based access control | ✅ | ❌ | ✅ |
-| Audit logging | ✅ | ✅ (SQLite) | ✅ (Mongo) |
-| OTel tracing | ✅ | ❌ | partial |
-| JSON Schema passthrough | ❌ (stage 1) | n/a | ✅ |
-| Tool-level allow/exclude | ❌ (stage 1) | ❌ | ✅ |
-| Meta-tools (lazy discovery) | ❌ (stage 1) | ❌ | ✅ |
-| Docker support | ❌ (stage 3) | ✅ | ✅ |
-| Web dashboard | ❌ (stage 3) | ✅ | ✅ |
-| OAuth / OIDC | ❌ (stage 4) | ❌ | ✅ |
-| Semantic tool search | ❌ (stage 4/5) | ❌ | ✅ |
-| Federation | ❌ (stage 5) | ❌ | ✅ |
-| A2A / agent registry | ❌ (stage 5) | ❌ | ✅ |
-| Traffic capture / replay | ❌ | ✅ | ❌ |
-| OpenShell (gRPC) provider | ✅ | ❌ | ❌ |
+| Capability                            | conductor    | Fiberplane  | Agentic    |
+| ------------------------------------- | ------------ | ----------- | ---------- |
+| Multi-provider aggregation            | ✅           | ✅          | ✅         |
+| Bearer token auth                     | ✅           | ✅          | ✅         |
+| Group-based access control            | ✅           | ❌          | ✅         |
+| Audit logging                         | ✅           | ✅ (SQLite) | ✅ (Mongo) |
+| OTel tracing                          | ✅           | ❌          | partial    |
+| JSON Schema passthrough               | ✅           | n/a         | ✅         |
+| Tool-level allow/exclude              | ✅           | ❌          | ✅         |
+| Meta-tools (lazy discovery)           | ✅           | ❌          | ✅         |
+| Provider description + instructions   | ✅           | ❌          | partial    |
+| Per-tool / per-action rate limits     | ❌ (stage 3) | ❌          | ❌         |
+| Outbound JWT signing to upstreams     | ❌ (stage 4) | ❌          | ❌         |
+| Manifest-driven provider onboarding   | ❌ (stage 3) | ❌          | partial    |
+| Virtual MCP servers per role          | ❌ (stage 4) | ❌          | ❌         |
+| Docker support                        | ❌ (stage 3) | ✅          | ✅         |
+| Web dashboard                         | ❌ (stage 3) | ✅          | ✅         |
+| OAuth / OIDC                          | ❌ (stage 4) | ❌          | ✅         |
+| Semantic tool search                  | ❌ (stage 4) | ❌          | ✅         |
+| Federation                            | ❌ (stage 5) | ❌          | ✅         |
+| A2A / agent registry                  | ❌ (stage 5) | ❌          | ✅         |
+| Traffic capture / replay              | ❌           | ✅          | ❌         |
+| OpenShell (gRPC) provider             | ✅           | ❌          | ❌         |

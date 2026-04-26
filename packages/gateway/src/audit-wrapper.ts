@@ -14,6 +14,8 @@ export function auditedProvider(inner: ToolProvider, options: AuditWrapperOption
   const tracer = getTracer("conductor.gateway");
   return {
     name: inner.name,
+    get description() { return inner.description; },
+    get instructions() { return inner.instructions; },
     connect: () => inner.connect(),
     close: () => inner.close(),
     listTools: () => inner.listTools(),
