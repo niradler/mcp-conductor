@@ -37,6 +37,10 @@ export interface ToolCallResult {
  */
 export interface ToolProvider {
   readonly name: string;
+  /** Human-readable description advertised by the upstream (e.g. MCP `serverInfo.description`). Populated after `connect()`. */
+  readonly description?: string;
+  /** Optional usage guidance from the upstream (e.g. MCP `initialize.instructions`). Populated after `connect()`. */
+  readonly instructions?: string;
   connect(): Promise<void>;
   close(): Promise<void>;
   listTools(): Promise<ToolSpec[]>;

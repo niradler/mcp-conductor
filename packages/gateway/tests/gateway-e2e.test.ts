@@ -76,6 +76,33 @@ describe("gateway e2e", () => {
     expect(rows[0]).toMatchObject({ user: "alice", provider: "stub", tool: "echo", status: "success" });
   }, 30_000);
 
+  test("conductor__list_providers returns name + description + toolCount", async () => {
+    const transport = new StreamableHTTPClientTransport(new URL(`${gw.address}/mcp`), {
+      requestInit: { headers: { Authorization: "Bearer alice-key" } },
+    });
+    const client = new Client({ name: "e2e", version: "0.0.1" }, { capabilities: {} });
+    await client.connect(transport);
+
+    const res = await client.callTool({ name: "conductor__list_providers", arguments: {} });
+    const content = res.content as Array<{ type: string; text?: string }>;
+    expect(content[0]?.type).toBe("text");
+    const summary = JSON.parse(content[0]!.text!) as Array<{
+      name: string;
+      description?: string;
+      instructions?: string;
+      toolCount: number;
+    }>;
+    expect(summary).toEqual([
+      {
+        name: "stub",
+        description: "Stub MCP server used for tests.",
+        instructions: "Call echo(text) to round-trip a string.",
+        toolCount: 2,
+      },
+    ]);
+    await client.close();
+  }, 30_000);
+
   test("wrong API key returns 401 with structured body", async () => {
     const res = await fetch(`${gw.address}/mcp`, {
       method: "POST",

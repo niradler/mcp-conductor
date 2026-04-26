@@ -102,6 +102,16 @@ export class UpstreamClient {
     })();
   }
 
+  /** Description advertised by the upstream MCP server's `serverInfo.description`. Available after connect. */
+  getDescription(): string | undefined {
+    return this.client?.getServerVersion()?.description;
+  }
+
+  /** Optional usage guidance from the upstream MCP `initialize.instructions`. Available after connect. */
+  getInstructions(): string | undefined {
+    return this.client?.getInstructions();
+  }
+
   async list(): Promise<ToolSpec[]> {
     if (!this.client) throw new ProviderError("not connected", this.opts.name);
     const res = await this.client.listTools();

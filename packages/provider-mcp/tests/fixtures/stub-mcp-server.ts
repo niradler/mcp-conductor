@@ -11,8 +11,8 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 const server = new Server(
-  { name: "stub", version: "0.0.1" },
-  { capabilities: { tools: {} } },
+  { name: "stub", version: "0.0.1", description: "Stub MCP server used for tests." },
+  { capabilities: { tools: {} }, instructions: "Call echo(text) to round-trip a string." },
 );
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({

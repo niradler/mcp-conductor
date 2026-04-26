@@ -16,7 +16,11 @@
 
 `conductor` speaks [Model Context Protocol](https://modelcontextprotocol.io) to your agent and aggregates tools from any number of backends behind bearer-token auth, group-based access control, and a full call-by-call audit log. **Agents stop caring how a tool is implemented; you stop pasting API keys into agent configs.**
 
-Backends implement a common `ToolProvider` interface. Today: **MCP upstream servers** over stdio. Planned: OpenAPI, GraphQL, HTTP tools, and sandboxed execution (OpenShell).
+Backends implement a common `ToolProvider` interface. Today: **MCP upstream servers** over stdio. Planned: OpenAPI, GraphQL, HTTP tools, and **sandboxed code & CLI execution** via OpenShell — install your CLI in the sandbox image and call it through `sandbox_exec` instead of writing a one-off MCP wrapper.
+
+## Why this exists
+
+Connecting many MCP servers directly to an agent is a context-tax trap. Each upstream's tool list and schemas get pre-loaded into the LLM's context window before the user has typed a word — the official GitHub MCP alone is ~50K tokens, and model accuracy starts dropping past ~100K ("Lost in the Middle"). Conductor sits in front of N upstreams as a **single MCP endpoint** and gives agents *lazy, governed* discovery: see only what the caller's role permits, list providers and tools on demand instead of all-at-once, audit and rate-limit every call, and (planned) **pre-filter tools by intent** so the model never sees the other 95%. The CLI-vs-MCP debate misses the point — use a local CLI when you want context-cheap and personal; use conductor when you need governance, audit, RBAC, and one endpoint across teams.
 
 ```
 ┌──────────────┐  MCP/HTTP   ┌───────────────────────────┐   stdio/…   ┌─────────────┐
@@ -29,6 +33,7 @@ Backends implement a common `ToolProvider` interface. Today: **MCP upstream serv
 ## Highlights
 
 - **One endpoint, many tools.** Upstreams are abstracted behind a `ToolProvider` contract; tools are exposed namespaced as `<provider>__<tool>`.
+- **Lazy tool discovery.** Built-in `conductor__list_providers` and `conductor__list_tools` meta-tools let agents discover capabilities on demand instead of pre-loading every tool's schema into context. Provider-level descriptions and instructions are surfaced from each upstream's `serverInfo` / `initialize` payload.
 - **Real auth.** SHA-256 hashed API keys, timing-safe comparison. Plaintext keys never appear in config.
 - **Group-based access control.** Users belong to groups; groups grant providers (or `"*"` for all).
 - **Audit everything.** Every tool call records user, provider, tool, redacted args, duration, status, and request id.
